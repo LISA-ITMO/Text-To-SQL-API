@@ -1,13 +1,80 @@
-import torch
 import os
 import warnings
+import subprocess
 from langchain_community.chat_models import ChatLlamaCpp
 
 llm = None
 
-#Функция для подбора наиболее эффективного способа загрузки LLM. 
-#Если есть GPU, то CUDA, если нет или какие-то проблемы, то CPU.
+def is_cuda_available_llama():
+    """
+    Проверяет доступность CUDA через llama-cpp-python, без использования PyTorch.
+    Возвращает (bool, str): (доступна_ли_CUDA, сообщение_о_статусе)
+    """
+    try:
+        # 1. Ищем видеокарту через nvidia-smi (быстрая предварительная проверка)
+        has_nvidia_gpu = False
+        gpu_name = ""
+        try:
+            result = subprocess.run(
+                ['nvidia-smi', '--query-gpu=name', '--format=csv,noheader'],
+                capture_output=True, text=True, check=False
+            )
+            if result.returncode == 0 and result.stdout.strip():
+                has_nvidia_gpu = True
+                gpu_name = result.stdout.strip().split('\n')[0]
+        except (subprocess.CalledProcessError, FileNotFoundError):
+            pass  # nvidia-smi не установлен - не критично
+
+        # 2. ПРЯМАЯ ПРОВЕРКА: пробуем импортировать llama_cpp и проверить бэкенды
+        try:
+            import llama_cpp
+            
+            # СПОСОБ 1: Через llama_get_available_backends() (для новых версий)
+            try:
+                from llama_cpp.llama_cpp import LLAMA_BACKEND_CUDA, llama_get_available_backends
+                available_backends = llama_get_available_backends()
+                
+                if LLAMA_BACKEND_CUDA in available_backends:
+                    if has_nvidia_gpu:
+                        return True, f"CUDA доступна (подтверждено: {gpu_name} + llama.cpp бэкенд)"
+                    return True, "CUDA доступна (llama.cpp бэкенд активирован)"
+                else:
+                    if has_nvidia_gpu:
+                        return False, f"Найдена {gpu_name}, но llama.cpp собран БЕЗ поддержки CUDA"
+                    return False, "CUDA недоступна (llama.cpp не имеет CUDA бэкенда)"
+                    
+            except ImportError:
+                # СПОСОБ 2: Для старых версий - проверяем через llama_build_info
+                if hasattr(llama_cpp, 'llama_build_info'):
+                    build_info = llama_cpp.llama_build_info()
+                    # Ищем ключевые слова CUDA в информации о сборке
+                    cuda_keywords = ['CUDA', 'cuBLAS', 'cuda', 'cublas']
+                    if any(keyword in build_info for keyword in cuda_keywords):
+                        if has_nvidia_gpu:
+                            return True, f"CUDA доступна ({gpu_name}, сборка: {build_info})"
+                        return True, f"CUDA доступна (сборка: {build_info})"
+                
+                # СПОСОБ 3: Последний вариант - проверяем версию библиотеки
+                # Если версия llama-cpp-python >= 0.2.0, она почти наверняка собрана с CUDA
+                # (если вы устанавливали с флагом CUDA)
+                version = llama_cpp.__version__
+                if has_nvidia_gpu:
+                    return True, f"Версия {version}, {gpu_name} - предполагаем, что CUDA доступна"
+                return False, f"Версия {version}, нет видеокарты NVIDIA"
+                
+        except ImportError:
+            # llama_cpp не установлен вообще
+            return False, "Библиотека llama-cpp-python не установлена"
+            
+    except Exception as e:
+        # Любая другая ошибка
+        return False, f"Ошибка при проверке: {str(e)[:100]}"
+
 def get_optimal_settings():
+    """
+    Подбирает наиболее эффективные настройки для загрузки модели.
+    Теперь проверяет CUDA через llama-cpp-python, а не через PyTorch.
+    """
     settings = {
         'n_ctx': 2048,
         'n_batch': 512,
@@ -16,36 +83,53 @@ def get_optimal_settings():
         'verbose': False
     }
 
-    cuda_available = False
-    try:
-        cuda_available = torch.cuda.is_available()
-    except:
-        pass
+    # Проверяем доступность CUDA через llama-cpp-python
+    cuda_available, status_message = is_cuda_available_llama()
+    print(f"Проверка CUDA: {status_message}")
 
     if cuda_available:
         try:
-            gpu_memory = torch.cuda.get_device_properties(0).total_memory
-            if gpu_memory >= 8 * 1024**3:
-                settings['n_gpu_layers'] = -1
-                settings['n_batch'] = 1024
-            elif gpu_memory >= 4 * 1024**3:
-                settings['n_gpu_layers'] = 20
-                settings['n_batch'] = 512
-            elif gpu_memory >= 2 * 1024**3:
-                settings['n_gpu_layers'] = 10
-                settings['n_batch'] = 512
+            # Получаем информацию о GPU через nvidia-smi (если доступно)
+            try:
+                nvidia_smi_output = subprocess.check_output(
+                    ['nvidia-smi', '--query-gpu=memory.total', '--format=csv,noheader,nounits'],
+                    text=True
+                ).strip()
                 
-            print(f"CUDA доступна, оптимальные настройки подобраны. Слои на GPU: {settings['n_gpu_layers']}.")
-            
+                if nvidia_smi_output:
+                    # Берем память первой видеокарты
+                    gpu_memory_mb = int(nvidia_smi_output.split('\n')[0])
+                    gpu_memory_bytes = gpu_memory_mb * 1024 * 1024
+                    
+                    # Подбираем настройки на основе объема памяти GPU
+                    if gpu_memory_bytes >= 8 * 1024**3:  # 8 ГБ и больше
+                        settings['n_gpu_layers'] = -1    # Все слои на GPU
+                        settings['n_batch'] = 1024
+                    elif gpu_memory_bytes >= 4 * 1024**3:  # 4-8 ГБ
+                        settings['n_gpu_layers'] = 20
+                        settings['n_batch'] = 512
+                    elif gpu_memory_bytes >= 2 * 1024**3:  # 2-4 ГБ
+                        settings['n_gpu_layers'] = 10
+                        settings['n_batch'] = 512
+                    
+                    print(f"GPU память: {gpu_memory_mb} МБ. Будут использованы {settings['n_gpu_layers']} слоёв на GPU.")
+                    
+            except (subprocess.CalledProcessError, FileNotFoundError, ValueError):
+                # Если nvidia-smi недоступен, используем консервативные настройки
+                print("Не удалось определить память GPU. Используются консервативные настройки.")
+                settings['n_gpu_layers'] = 10
+                
         except Exception as e:
-            print(f"Ошибка при определении оптимальных настроек CUDA: {e}.")
+            print(f"Ошибка при определении настроек GPU: {e}. Используем CPU.")
             cuda_available = False
+            settings['n_gpu_layers'] = 0
 
+    # Настройки CPU (оставляем как было)
     cpu_threads = os.cpu_count()
     if cpu_threads:
         settings['n_threads'] = max(1, cpu_threads - 2)
         print(f"CPU потоков: {cpu_threads}, будет использовано: {settings['n_threads']}.")
-   
+    
     return settings, cuda_available
 
 
