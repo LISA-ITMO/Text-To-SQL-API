@@ -1,0 +1,4 @@
+gguf_model/
+__pycache__/
+.env
+server_test.py
