@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 from app.schemas import QuestionSQL, Question, QuestionSQL_TOOL, QuestionSQL_TOOL_CHAIN
-from app.DAOs.llm_llama3b_DAO import llmDAO
+from app.DAOs.llm_DAO import llmDAO, validate_sql
 
 app = APIRouter(prefix="/LLM")
 
@@ -23,6 +23,10 @@ def get_llm_answer_with_tool_and_chain(data:QuestionSQL_TOOL_CHAIN):
 @app.post("/tooltest")
 def get_tool_test():
     return(llmDAO.tool_test())
+
+@app.post('/sqlvalidatortest')
+def sql_validate(sql:str):
+    return(validate_sql(sql_query=sql))
 
 @app.post("/getllmsqlanswerwithrag")
 def get_llm_sql_answer_with_rag(data: QuestionSQL_TOOL_CHAIN):
