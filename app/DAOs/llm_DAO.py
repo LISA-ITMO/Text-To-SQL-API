@@ -9,21 +9,51 @@ from langgraph.graph import StateGraph, END
 from langchain.agents import create_agent
 from langchain.tools import tool
 from typing import TypedDict, List, Dict, Any
-from app.services.llm_llama3b_service import get_llm
+from app.services.llm_service import get_llm
 from app.DAOs.tool_DAO import toolDAO
 import re
 import json
-import logging
+from sqlglot import parse_one, exp, ParseError
 
 from app.services.rag_service import get_context_from_rag
 
+#Функция для валидации sql перед отправкой (проверка на выполняемость, синтаксис и отсутствие INSERT, DELETE и т.д.), а также парсер текста для поиска sql
+def validate_sql(sql_query:str, dialect:str = "postgres") -> Dict:
+    forbidden_expressions = [exp.Insert, exp.Update, exp.Delete, exp.Drop, exp.Alter,
+                             exp.Create, exp.TruncateTable, exp.Merge, exp.Grant, exp.Revoke]
+    cleaned_query = sql_query.strip()
+    if cleaned_query.upper().startswith("SQL:"):
+        cleaned_query = cleaned_query[4:].strip()
 
-#Фунция для форматирования SQL-запроса, чтобы очистить его от лишнего
-def format_llm_answer(answer:str) -> str:
-    end_substring = re.search(';', answer)
-    start_substring = re.search('SELECT', answer)
-    formatted_str = re.sub(r'\s{2,}', ' ', answer[start_substring.start():end_substring.start()] + ';')
-    return formatted_str
+    tree = parse_one(cleaned_query, read=dialect)
+    clean_sql = tree.sql(dialect=dialect)
+
+    try:
+        for expr_type in forbidden_expressions:
+            if tree.find(expr_type):
+                return {
+                    'Status': False,
+                    'Error': "Forbidden expression in SQL",
+                    'SQL': None
+                }
+        
+        if not tree.find(exp.Select):
+                return {
+                    'Status': False,
+                    'Error': "No SELECT in expression",
+                    'SQL': None
+                }
+        return {
+            'Status': True,
+            'Error': None,
+            'SQL': clean_sql
+            }
+    except ParseError as e:
+        return {
+            'Status': False,
+            'Error': f"Syntax error: {e}",
+            'SQL': None
+        }
 
 AVAILABLE_TOOLS = {
     "connect_and_get_all_tables_info": toolDAO.connect_and_get_all_tables_info,
@@ -113,11 +143,19 @@ def sql_generation_node(state: AgentState) -> AgentState:
             ),
         max_tokens=64,
         temperature=0.2)
-    result = format_llm_answer(response.content)
-    return{
-        **state,
-        "final_answer": result
-    }
+    
+    final_answer = validate_sql(response.content) 
+    if final_answer['Status']:
+        return{
+            **state,
+            "final_answer": final_answer['SQL']
+        }
+    else:
+        return{
+            **state,
+            "final_answer": final_answer['Error']
+        }
+    
 
 def sql_exec_node(state: AgentState) -> AgentState:
     sql_exec_result = toolDAO.connect_and_execute_sql(state.get("final_answer"))
@@ -158,7 +196,12 @@ class llmDAO():
                     ),
                 max_tokens=64,
                 temperature=0.2)
-            return format_llm_answer(response.content) 
+            
+            final_answer = validate_sql(response.content) 
+            if final_answer['Status']:
+                return final_answer['SQL']
+            else:
+                return final_answer['Error']
         
         except Exception as e:
             return (f"Ошибка работы LLM: {e}")
@@ -218,10 +261,14 @@ class llmDAO():
             temperature=0.6)
 
             result = response['choices'][0]['text']
-            formatted_result = format_llm_answer(result)
+            valedate_answer = validate_sql(response.content) 
+            if final_answer['Status']:
+                final_answer['result'] = valedate_answer['SQL']
+            else:
+                final_answer['result'] = valedate_answer['Error']
             final_answer = {}
             final_answer['user_request'] = data.llm_prompt
-            final_answer['result'] = formatted_result
+            
             final_answer['context'] = response_provider[0]["arguments"]["content"]
             return final_answer
         except Exception as e:
@@ -398,7 +445,11 @@ class llmDAO():
                 sql_query += ';'
 
             # Очищаем SQL от лишнего текста
-            sql_query = format_llm_answer(sql_query)
+            validate_answer = validate_sql(response.content) 
+            if validate_answer['Status']:
+                sql_query = validate_answer['SQL']
+            else:
+                sql_query = validate_answer['Error']
 
             # Если требуется выполнить SQL
             if data.execute_sql:
