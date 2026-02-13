@@ -69,8 +69,9 @@ class AgentState(TypedDict):
 #Нода агента с формированием промпта для вызова функции и возвращения JSON с состоянием агента
 def agent_node(state: AgentState) -> AgentState:
     llm = get_llm()
+    context = toolDAO.connect_and_get_all_tables_info()
 
-    model_with_tools = llm.bind_tools([toolDAO.connect_and_get_all_tables_info])
+    '''model_with_tools = llm.bind_tools([toolDAO.connect_and_get_all_tables_info])
     response = model_with_tools.invoke("Какие таблицы и их столбцы в скобках есть у меня в базе данных? Выведи их без перевода на русский язык.")
     
     response_text = response.content if hasattr(response, 'content') else str(response)
@@ -81,16 +82,16 @@ def agent_node(state: AgentState) -> AgentState:
         if json_match:
             data = json.loads(json_match.group())
         else:
-            data = json.loads(response_text)
+            data = json.loads(response_text)'''
         
-        return {
+    return {
             "question": state["question"],
-            "function_to_call": data.get('name'),
-            "context": "",
+            "function_to_call": '1',
+            "context": context,
             "final_answer": ""
         }
         
-    except json.JSONDecodeError:
+    '''except json.JSONDecodeError:
         # Если не получилось распарсить JSON, возвращаем как финальный ответ
         print("Ошибка обработки JSON в ноде агента!")
         return {
@@ -98,7 +99,7 @@ def agent_node(state: AgentState) -> AgentState:
             "function_to_call": "",
             "context": "",
             "final_answer": ""
-        }
+        }'''
 
 #Нода для получения функции и вызова её из массива функций 
 def tool_node(state: AgentState) -> AgentState:

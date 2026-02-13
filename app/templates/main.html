@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport"
+            content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+        <meta http-equiv="X-UA-Compatible" content="ie=edge">
+        <title>Text-To-SQL Master</title>
+        <link rel="stylesheet" type="text/css" href="../static/styles_main.css">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Faster+One&display=swap" rel="stylesheet">
+    </head>
+
+    <body>
+        <div class="container">
+            <h1>TEXT-TO-SQL Master</h1>
+            <form id="Answer" class="Generation_Form">
+                <div class="Answer">
+                <label for="answer" class="rect-label">AI Assistant</label>
+                <textarea type="answer" id="answer" name="answer" class="rect-input"></textarea>
+                </div>
+
+                <div class="Question">
+                <label for="question" class="rect-label">User</label>
+                <textarea type="question" id="question" name="question" class="rect-input" required></textarea>
+                </div>
+
+                <button type="submit" id="btn_question" class="btn_question" onclick="submitFunction(event)">Submit</button>
+            </form>
+        </div>
+
+        <div class="btn_container">
+            <button type="submit" id="btn_options" class="btn_options" onclick=""><img src="..\static\icons\settings.png" width="50%"></a></button>
+        </div>
+
+        <script src="../static/js/script.js"></script>
+    </body>
+</html>
