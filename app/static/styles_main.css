@@ -21,14 +21,14 @@ body {
     text-align: center;
 }
 
-.container .Question {
+.container .Answer {
     position: absolute;
-    top: 400px; 
-    right: 25px;
+    top: 10%; 
+    bottom: 20%;
+    right: 5%;
+    left: 5%;
     padding: 20px;
     border-radius: 2%;
-    height: 250px;
-    width: 350px;
     background-color: #404B97;
     font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
     font-weight: bold;
@@ -38,20 +38,15 @@ body {
     box-sizing: border-box;
 }
 
-.container .Answer {
+.container .Question {
     position: absolute;
-    top: 100px; 
-    left: 25px;
-    padding: 20px;
-    border-radius: 2%;
-    height: 250px;
-    width: 350px;
+    bottom: 5%;
+    right: 5%;
+    left: 5%;
+    height: 65px;
     background-color: #404B97;
-    font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
-    font-weight: bold;
-    font-size: large;
-    color: #FFFFFF;
-    text-decoration: underline;
+    border: 2px solid #404B97;
+    border-radius: 10px;
     box-sizing: border-box;
 }
 
@@ -71,27 +66,35 @@ body {
     text-decoration: none;
 }
 
-.rect-input {
-    width: 98%;
-    height: 65%;
+.rect-answer {
+    position: absolute;
+    padding: 12px 15px;
+    font-size: 28px;
+    top: 15%;
+    bottom: 15%;
+    right: 5%;
+    left: 5%;
     border-radius: 5%;
 
 }
 
+.rect-question {
+    position: absolute;
+    font-size: 20px;
+    top: 5%;
+    bottom: 5%;
+    right: 15%;
+    left: 5%;
+}
+
 .btn_question {
     position: absolute;
-    background-color: #5C6BC0;
-    bottom: 5%;
-    left: 30%;
-    right: 30%;
-    height: 50px;
-    text-align: center;
-    color: white;
-    font-family: 'Gill Sans', 'Gill Sans MT', Calibri, 'Trebuchet MS', sans-serif;
-    font-weight: bold;
-    font-size: large;
+    background-color: #5c6bc000;
+    bottom: 0%;
+    top: 0%;
+    right: 0%;
     border: 3px solid #5C6BC0;
-    border-radius: 4px;
+    border-radius: 0% 20% 20% 0%;
 }
 
 .btn_question:hover {
