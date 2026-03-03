@@ -3,38 +3,28 @@ import logging
 import re
 from typing import Optional, List
 
-logger = logging.getLogger(__name__)
+from app.config.config import LEMMATIZER_CONFIG, RAG_CONFIG
 
+logger = logging.getLogger(__name__)
 
 class QueryLemmatizer:
     """Класс для лемматизации пользовательского запроса"""
 
-    def __init__(self):
+    def __init__(self, enabled=None, additional_stop_words=None):
+        self.enabled = enabled if enabled is not None else LEMMATIZER_CONFIG.get('enabled', True)
         self.morph = None
-        # Список стоп-слов
-        self.stop_words = set([
-            'и', 'в', 'во', 'не', 'что', 'он', 'на', 'я', 'с', 'со', 'как', 'а', 'то',
-            'все', 'она', 'так', 'его', 'но', 'да', 'ты', 'к', 'у', 'же', 'вы', 'за',
-            'бы', 'по', 'только', 'ее', 'мне', 'было', 'вот', 'от', 'меня', 'еще', 'нет',
-            'о', 'из', 'ему', 'теперь', 'когда', 'даже', 'ну', 'вдруг', 'ли', 'если',
-            'уже', 'или', 'ни', 'быть', 'был', 'него', 'до', 'вас', 'нибудь', 'опять',
-            'уж', 'вам', 'ведь', 'там', 'потом', 'себя', 'ничего', 'ей', 'может', 'они',
-            'тут', 'где', 'есть', 'надо', 'ней', 'для', 'мы', 'тебя', 'их', 'чем', 'была',
-            'сам', 'чтоб', 'без', 'будто', 'чего', 'раз', 'тоже', 'себе', 'под', 'будет',
-            'ж', 'тогда', 'кто', 'этот', 'того', 'потому', 'этого', 'какой', 'совсем',
-            'ним', 'здесь', 'этом', 'один', 'почти', 'мой', 'тем', 'чтобы', 'нее', 'сейчас',
-            'были', 'куда', 'зачем', 'всех', 'никогда', 'можно', 'при', 'наконец', 'два',
-            'об', 'другой', 'хоть', 'после', 'над', 'больше', 'тот', 'через', 'эти', 'нас',
-            'про', 'всего', 'них', 'какая', 'много', 'разве', 'три', 'эту', 'моя', 'впрочем',
-            'хорошо', 'свою', 'этой', 'перед', 'иногда', 'лучше', 'чуть', 'том', 'нельзя',
-            'такой', 'им', 'более', 'всегда', 'конечно', 'всю', 'между'
-        ])
-
-        self._init_morph()
+        # Базовые стоп-слова из RAG_CONFIG, плюс дополнительные из lemmatizer секции
+        self.stop_words = set(RAG_CONFIG.get('stop_words', []))
+        extra_stop = LEMMATIZER_CONFIG.get('additional_stop_words', [])
+        self.stop_words.update(extra_stop)
+        if self.enabled:
+            self._init_morph()
+        else:
+            logger.info("Лемматизатор отключен конфигурацией")
 
     def _init_morph(self):
         """Инициализирует морфологический анализатор"""
-        # Сначала пытаемся использовать pymorphy3 (совместим с Python 3.11+)
+
         try:
             import pymorphy3
             self.morph = pymorphy3.MorphAnalyzer()
@@ -43,7 +33,7 @@ class QueryLemmatizer:
         except ImportError as e:
             logger.debug(f"pymorphy3 не установлен: {e}")
 
-        # Затем пытаемся использовать pymorphy2 (для старых версий Python)
+
         try:
             import pymorphy2
             self.morph = pymorphy2.MorphAnalyzer()
@@ -69,12 +59,11 @@ class QueryLemmatizer:
 
     def lemmatize_query(self, query: str) -> str:
         """Лемматизирует запрос пользователя"""
-        if not query or not isinstance(query, str):
-            logger.warning(f"Некорректный запрос: {query}")
+        if not self.enabled or not self.morph:
             return query
 
-        if not self.morph:
-            logger.debug("Лемматизатор недоступен, возвращаем исходный запрос")
+        if not query or not isinstance(query, str):
+            logger.warning(f"Некорректный запрос: {query}")
             return query
 
         try:
@@ -119,7 +108,7 @@ class QueryLemmatizer:
 
     def is_available(self) -> bool:
         """Проверяет доступность лемматизатора"""
-        return self.morph is not None
+        return self.enabled and self.morph is not None
 
     def add_stop_words(self, words: List[str]):
         """Добавляет дополнительные стоп-слова"""
