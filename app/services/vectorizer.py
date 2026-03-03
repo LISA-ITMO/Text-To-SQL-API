@@ -37,15 +37,15 @@ class DatabaseVectorizer:
 
         logger.info(f"Начало векторизации {len(tables)} таблиц")
 
-        # Сначала создаем кэш имен таблиц для лучшей обработки
+
         self._build_table_cache(tables)
 
-        # Создаем документ с общей информацией о БД
+
         db_doc = self._create_database_document(db_schema)
         if db_doc:
             documents.append(db_doc)
 
-        # Создаем документы для каждой таблицы
+
         for full_table_name, table_info in tqdm(tables.items(), desc="Векторизация таблиц"):
             table_doc = self._create_table_document(full_table_name, table_info)
             if table_doc:
@@ -96,7 +96,7 @@ class DatabaseVectorizer:
         if table_count == 0:
             return None
 
-        # Подсчитываем статистику
+
         total_rows = 0
         total_columns = 0
         tables_by_schema = {}
@@ -111,13 +111,13 @@ class DatabaseVectorizer:
             total_rows += table_info.get('row_count', 0)
             total_columns += len(table_info.get('columns', []))
 
-            # Определяем категорию таблицы
+
             category = self._determine_table_category(full_name, table_info)
             if category not in table_categories:
                 table_categories[category] = []
             table_categories[category].append(full_name)
 
-        # Формируем содержимое
+
         content_parts = [
             f"БАЗА ДАННЫХ {database_name}",
             f"ВЕРСИЯ PostgreSQL {postgres_version}",
@@ -127,16 +127,16 @@ class DatabaseVectorizer:
             f"ВРЕМЯ СКАНИРОВАНИЯ {extraction_time}"
         ]
 
-        # Добавляем таблицы по схемам
+
         for schema, schema_tables in tables_by_schema.items():
             content_parts.append(f"СХЕМА {schema} ТАБЛИЦ {len(schema_tables)}")
 
-        # Добавляем категории таблиц
+
         content_parts.append("КАТЕГОРИИ ТАБЛИЦ")
         for category, category_tables in table_categories.items():
             content_parts.append(f"{category} {len(category_tables)}")
 
-        # Добавляем ключевые таблицы системы
+
         key_tables = self._identify_key_tables(tables)
         if key_tables:
             content_parts.append("КЛЮЧЕВЫЕ ТАБЛИЦЫ")
@@ -178,17 +178,17 @@ class DatabaseVectorizer:
         foreign_keys = table_info.get('foreign_keys', [])
         indexes = table_info.get('indexes', [])
 
-        # Определяем категорию таблицы
+
         category = self._determine_table_category(full_table_name, table_info)
 
-        # Формируем структурированное содержимое
+
         content_parts = [f"ТАБЛИЦА {schema}.{table_name}"]
 
         if category:
             content_parts.append(f"КАТЕГОРИЯ {category}")
 
         if comment:
-            # Очищаем комментарий от лишних пробелов и переносов строк
+
             clean_comment = re.sub(r'\s+', ' ', comment.strip())
             content_parts.append(f"КОММЕНТАРИЙ {clean_comment}")
 
@@ -211,7 +211,7 @@ class DatabaseVectorizer:
                 col_info = self._format_column_info(col)
                 content_parts.append(col_info)
 
-                # Определяем потенциальные первичные ключи
+
                 if self._is_primary_key_candidate(col):
                     primary_keys.append(col['name'])
 
@@ -227,7 +227,7 @@ class DatabaseVectorizer:
                 fk_info = f"{fk['column']} -> {fk['references_table']}.{fk['references_column']}"
                 content_parts.append(fk_info)
 
-                # Добавляем в список ссылающихся таблиц
+
                 ref_table = fk['references_table']
                 ref_table_short = ref_table.split('.')[-1]
                 referenced_tables.add(ref_table_short)
@@ -238,22 +238,22 @@ class DatabaseVectorizer:
         # Индексы
         if indexes:
             content_parts.append("ИНДЕКСЫ")
-            for idx in indexes[:5]:  # Ограничиваем количество индексов
+            for idx in indexes[:5]:
                 idx_name = idx['name']
-                # Извлекаем столбцы из определения индекса
+
                 idx_def = idx['definition']
                 if 'ON ' in idx_def and '(' in idx_def and ')' in idx_def:
                     cols_part = idx_def.split('(')[1].split(')')[0]
                     content_parts.append(f"{idx_name} {cols_part}")
 
-        # Определяем вероятное назначение таблицы
+
         purpose = self._determine_table_purpose(table_name, table_info)
         if purpose:
             content_parts.append(f"НАЗНАЧЕНИЕ {purpose}")
 
         content = "\n".join(content_parts)
 
-        # Подготавливаем метаданные
+
         metadata = {
             'type': 'table_info',
             'schema': schema,
@@ -301,13 +301,13 @@ class DatabaseVectorizer:
         schema = table_info.get('schema', 'public')
         columns = table_info.get('columns', [])
 
-        # Получаем имена столбцов
+
         column_names = [col['name'] for col in columns]
 
-        # Формируем содержимое
+
         content_parts = [f"ДАННЫЕ ТАБЛИЦЫ {schema}.{table_name}"]
 
-        # Добавляем структуру столбцов
+
         content_parts.append("СТРУКТУРА")
         for i, col_name in enumerate(column_names[:10]):  # Ограничиваем количество столбцов
             if i < len(columns):
@@ -317,7 +317,7 @@ class DatabaseVectorizer:
                     col_info += " NOT_NULL"
                 content_parts.append(col_info)
 
-        # Добавляем примеры данных
+
         content_parts.append("ПРИМЕРЫ")
         for i, row in enumerate(sample_data[:3]):  # Ограничиваем количество строк
             row_parts = []
