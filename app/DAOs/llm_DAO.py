@@ -8,52 +8,11 @@ from langchain_community.chat_models import ChatLlamaCpp
 from langgraph.graph import StateGraph, END
 from langchain.agents import create_agent
 from langchain.tools import tool
-from typing import TypedDict, List, Dict, Any
+from typing import TypedDict
 from app.services.llm_service import get_llm
 from app.DAOs.tool_DAO import toolDAO
-import re
-import json
-from sqlglot import parse_one, exp, ParseError
-
+from app.services.sql_service import validate_sql
 from app.services.rag_service import get_context_from_rag
-
-#Функция для валидации sql перед отправкой (проверка на выполняемость, синтаксис и отсутствие INSERT, DELETE и т.д.), а также парсер текста для поиска sql
-def validate_sql(sql_query:str, dialect:str = "postgres") -> Dict:
-    forbidden_expressions = [exp.Insert, exp.Update, exp.Delete, exp.Drop, exp.Alter,
-                             exp.Create, exp.TruncateTable, exp.Merge, exp.Grant, exp.Revoke]
-    cleaned_query = sql_query.strip()
-    if cleaned_query.upper().startswith("SQL:"):
-        cleaned_query = cleaned_query[4:].strip()
-
-    tree = parse_one(cleaned_query, read=dialect)
-    clean_sql = tree.sql(dialect=dialect)
-
-    try:
-        for expr_type in forbidden_expressions:
-            if tree.find(expr_type):
-                return {
-                    'Status': False,
-                    'Error': "Forbidden expression in SQL",
-                    'SQL': None
-                }
-        
-        if not tree.find(exp.Select):
-                return {
-                    'Status': False,
-                    'Error': "No SELECT in expression",
-                    'SQL': None
-                }
-        return {
-            'Status': True,
-            'Error': None,
-            'SQL': clean_sql
-            }
-    except ParseError as e:
-        return {
-            'Status': False,
-            'Error': f"Syntax error: {e}",
-            'SQL': None
-        }
 
 AVAILABLE_TOOLS = {
     "connect_and_get_all_tables_info": toolDAO.connect_and_get_all_tables_info,
@@ -65,12 +24,14 @@ class AgentState(TypedDict):
     function_to_call: str
     context: str
     final_answer: str
+    sql: str
 
 #Нода агента с формированием промпта для вызова функции и возвращения JSON с состоянием агента
 def agent_node(state: AgentState) -> AgentState:
     llm = get_llm()
+    context = toolDAO.connect_and_get_all_tables_info()
 
-    model_with_tools = llm.bind_tools([toolDAO.connect_and_get_all_tables_info])
+    '''model_with_tools = llm.bind_tools([toolDAO.connect_and_get_all_tables_info])
     response = model_with_tools.invoke("Какие таблицы и их столбцы в скобках есть у меня в базе данных? Выведи их без перевода на русский язык.")
     
     response_text = response.content if hasattr(response, 'content') else str(response)
@@ -81,16 +42,17 @@ def agent_node(state: AgentState) -> AgentState:
         if json_match:
             data = json.loads(json_match.group())
         else:
-            data = json.loads(response_text)
+            data = json.loads(response_text)'''
         
-        return {
+    return {
             "question": state["question"],
-            "function_to_call": data.get('name'),
-            "context": "",
-            "final_answer": ""
+            "function_to_call": '1',
+            "context": context,
+            "final_answer": "",
+            "sql":""
         }
         
-    except json.JSONDecodeError:
+    '''except json.JSONDecodeError:
         # Если не получилось распарсить JSON, возвращаем как финальный ответ
         print("Ошибка обработки JSON в ноде агента!")
         return {
@@ -98,7 +60,7 @@ def agent_node(state: AgentState) -> AgentState:
             "function_to_call": "",
             "context": "",
             "final_answer": ""
-        }
+        }'''
 
 #Нода для получения функции и вызова её из массива функций 
 def tool_node(state: AgentState) -> AgentState:
@@ -148,7 +110,8 @@ def sql_generation_node(state: AgentState) -> AgentState:
     if final_answer['Status']:
         return{
             **state,
-            "final_answer": final_answer['SQL']
+            "final_answer": final_answer['SQL'],
+            "sql": final_answer['SQL']
         }
     else:
         return{
@@ -323,8 +286,9 @@ class llmDAO():
             "function_to_call":"",
             "context":"",
             "final_answer":"",
+            "sql":"",
         })
-        return (result["final_answer"], result["context"], result["function_to_call"])
+        return (result["final_answer"], result["context"], result["function_to_call"], result["sql"])
 
     @staticmethod
     def get_llm_sql_answer_with_tool_and_chain_and_RAG(data: QuestionSQL_TOOL_CHAIN):

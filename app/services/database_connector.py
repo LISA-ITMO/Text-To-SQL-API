@@ -11,8 +11,8 @@ logger = logging.getLogger(__name__)
 class DatabaseConnector:
     """Класс для подключения к PostgreSQL базе данных upgo"""
 
-    def __init__(self, host='localhost', port=5432, database='upgo',
-                 user='postgres', password='postgres'):
+    def __init__(self, host='10.94.21.18', port=5432, database='upgo_test_02',
+                 user='upgo_kgs', password='Luu0QZbME93EOzZ'):
         self.host = host
         self.port = port
         self.database = database

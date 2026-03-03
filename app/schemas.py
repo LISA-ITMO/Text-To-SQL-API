@@ -11,3 +11,6 @@ class QuestionSQL_TOOL(BaseModel):
 
 class QuestionSQL_TOOL_CHAIN(QuestionSQL_TOOL):
     execute_sql:bool = False
+
+class tool_safe_sql_execute(BaseModel):
+    sql:str

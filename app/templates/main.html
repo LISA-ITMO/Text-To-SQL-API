@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport"
+            content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+        <meta http-equiv="X-UA-Compatible" content="ie=edge">
+        <title>Text-To-SQL Master</title>
+        <link rel="stylesheet" type="text/css" href="../static/styles_main.css">
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Faster+One&display=swap" rel="stylesheet">
+    </head>
+
+    <body>
+        <div class="container">
+            <h1>TEXT-TO-SQL Master</h1>
+            <!-- Область чата с прокруткой -->
+            <div class="chat-container" id="chatContainer">
+                <div class="messages-area" id="messagesArea">
+                    <!-- Сюда будут добавляться сообщения -->
+                </div>
+            </div>
+
+            <!-- Форма для ввода вопроса -->
+            <form id="QuestionForm" class="input-form">
+                <div class="input-group">
+                    <textarea type="text" id="question" name="question" class="question-input" placeholder="Введите ваш вопрос..." required></textarea>
+                    <button type="submit" id="btn_submit" class="btn_submit" onclick="submitFunction(event)">Отправить</button>
+                </div>
+            </form>
+        </div>
+
+        <div class="btn_options_container">
+            <button type="submit" id="btn_options" class="btn_options" onclick=""><img src="..\static\icons\settings.png" width="50%"></a></button>
+        </div>
+
+        <div id="devContainer" class="cb_developers_container_hidden">
+            <input type="checkbox" id="cb_developers" class="cb_developers">
+            <label for="cb_developers">Режим разработчика</label>
+            <p><textarea type="text" id="sql_question" name="question" class="sql-question-input" placeholder="Введите SQL-запрос..."></textarea>
+            <p><button type="submit" id="sql_btn_submit" class="sql_btn_submit" onclick="submitFunction2(event)">Выполнить SQL</button>
+        </div>
+
+        <script src="../static/js/script.js"></script>
+    </body>
+</html>
