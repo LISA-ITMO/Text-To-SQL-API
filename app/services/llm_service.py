@@ -102,15 +102,18 @@ def get_optimal_settings():
                     gpu_memory_bytes = gpu_memory_mb * 1024 * 1024
                     
                     # Подбираем настройки на основе объема памяти GPU
-                    if gpu_memory_bytes >= 8 * 1024**3:  # 8 ГБ и больше
+                    if gpu_memory_bytes >= 10 * 1024**3:  # 12 ГБ и больше
                         settings['n_gpu_layers'] = -1    # Все слои на GPU
                         settings['n_batch'] = 1024
-                    elif gpu_memory_bytes >= 4 * 1024**3:  # 4-8 ГБ
+                        settings['n_ctx'] = 16384
+                    elif gpu_memory_bytes >= 5 * 1024**3:  # 5-10 ГБ
                         settings['n_gpu_layers'] = 20
-                        settings['n_batch'] = 512
-                    elif gpu_memory_bytes >= 2 * 1024**3:  # 2-4 ГБ
+                        settings['n_batch'] = 4096
+                        settings['n_ctx'] = 8192
+                    elif gpu_memory_bytes >= 2 * 1024**3:  # 2-5 ГБ
                         settings['n_gpu_layers'] = 10
                         settings['n_batch'] = 512
+                        settings['n_ctx'] = 2048
                     
                     print(f"GPU память: {gpu_memory_mb} МБ. Будут использованы {settings['n_gpu_layers']} слоёв на GPU.")
                     
