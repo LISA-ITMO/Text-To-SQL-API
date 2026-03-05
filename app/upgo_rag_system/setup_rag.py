@@ -7,18 +7,30 @@ import sys
 import os
 from pathlib import Path
 
-# Добавляем путь к app для импорта
-sys.path.append(str(Path(__file__).parent.parent))
+# Добавляем пути для импорта
+current_dir = Path(__file__).parent.absolute()
+project_root = current_dir.parent.parent
+sys.path.insert(0, str(project_root))
 
+# Явно добавляем все возможные пути
+sys.path.insert(0, str(project_root / 'app'))
+sys.path.insert(0, str(project_root / 'backend'))
 
 def setup_vector_database():
     """Настраивает векторную базу данных"""
     try:
-        # Импортируем здесь, чтобы избежать циклических зависимостей
-        from app.services.database_connector import DatabaseConnector
-        from app.services.vectorizer import DatabaseVectorizer
-        from app.services.embeddings_manager import SentenceTransformerEmbeddings
-        from app.services.vector_db_manager import VectorDatabaseManager
+        # Пробуем импортировать разными способами
+        try:
+            from app.services.database_connector import DatabaseConnector
+            from app.services.vectorizer import DatabaseVectorizer
+            from app.services.embeddings_manager import SentenceTransformerEmbeddings
+            from app.services.vector_db_manager import VectorDatabaseManager
+        except ImportError:
+            # Альтернативный импорт без app.
+            from services.database_connector import DatabaseConnector
+            from services.vectorizer import DatabaseVectorizer
+            from services.embeddings_manager import SentenceTransformerEmbeddings
+            from services.vector_db_manager import VectorDatabaseManager
 
         print("\n" + "=" * 80)
         print("НАСТРОЙКА ВЕКТОРНОЙ БАЗЫ ДАННЫХ ДЛЯ UPGО")
@@ -54,7 +66,10 @@ def setup_vector_database():
 
     except ImportError as e:
         print(f"Ошибка импорта модулей: {e}")
-        print("Убедитесь, что установлены все зависимости для RAG системы:")
+        print("\nПроверьте структуру папок:")
+        print(f"Текущая директория: {current_dir}")
+        print(f"Корень проекта: {project_root}")
+        print("\nУбедитесь, что установлены все зависимости:")
         print("pip install sentence-transformers qdrant-client pymorphy2 pymorphy2-dicts-ru")
         return False
     except Exception as e:
@@ -67,7 +82,11 @@ def setup_vector_database():
 def check_rag_system():
     """Проверяет работу RAG системы"""
     try:
-        from app.services.rag_service import get_rag_system
+        try:
+            from app.services.rag_service import get_rag_system
+        except ImportError:
+            from services.rag_service import get_rag_system
+            
         rag_system = get_rag_system()
 
         test_questions = [
@@ -98,9 +117,9 @@ if __name__ == "__main__":
     if choice == "1":
         success = setup_vector_database()
         if success:
-            print("\n RAG система успешно настроена!")
+            print("\nRAG система успешно настроена!")
         else:
-            print("\n Не удалось настроить RAG систему")
+            print("\nНе удалось настроить RAG систему")
     elif choice == "2":
         check_rag_system()
     else:
