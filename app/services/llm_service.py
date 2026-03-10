@@ -2,6 +2,7 @@ import os
 import warnings
 import subprocess
 from langchain_community.chat_models import ChatLlamaCpp
+from llama_cpp import Llama
 
 llm = None
 
@@ -102,9 +103,9 @@ def get_optimal_settings():
                     gpu_memory_bytes = gpu_memory_mb * 1024 * 1024
                     
                     # Подбираем настройки на основе объема памяти GPU
-                    if gpu_memory_bytes >= 10 * 1024**3:  # 12 ГБ и больше
+                    if gpu_memory_bytes >= 10 * 1024**3:  # 10 ГБ и больше
                         settings['n_gpu_layers'] = -1    # Все слои на GPU
-                        settings['n_batch'] = 1024
+                        settings['n_batch'] = 8182
                         settings['n_ctx'] = 16384
                     elif gpu_memory_bytes >= 5 * 1024**3:  # 5-10 ГБ
                         settings['n_gpu_layers'] = 20
@@ -135,49 +136,75 @@ def get_optimal_settings():
     
     return settings, cuda_available
 
-
-#Загрузка модели gguf через langchain 
-def load_model(model_path: str):
+# Загрузка модели из Hugging Face
+def load_model_from_hf(repo_id: str, filename: str = None, local_model_path: str = None):
+    """
+    Загружает модель из Hugging Face Hub или с локального пути.
+    
+    Args:
+        repo_id: ID репозитория на Hugging Face (например, "vindows/qwen2.5-0.5b-text-to-sql-gguf")
+        filename: Имя файла модели в репозитории (обязательно для загрузки с HF)
+        local_model_path: Локальный путь к модели (альтернатива загрузке с HF)
+    """
     global llm
     try:
         settings, cuda_available = get_optimal_settings()
 
-        if cuda_available:
-            try:
-                llm = ChatLlamaCpp(
-                    model_path=model_path,
-                    n_ctx=settings['n_ctx'],
-                    n_threads=settings['n_threads'],
-                    n_batch=settings['n_batch'],
-                    n_gpu_layers=settings['n_gpu_layers'],
-                    verbose=settings['verbose']
-                )
-                print(f"Модель успешно загружена с GPU ускорением.")
-                return llm
-            except Exception as gpu_error:
-                warnings.warn(f"Не удалось загрузить на GPU.")
-                settings['n_gpu_layers'] = 0
-                cuda_available = False
-        
-        if not cuda_available:
+        # Подготавливаем параметры для загрузки
+        model_kwargs = {
+            'n_ctx': settings['n_ctx'],
+            'n_threads': settings['n_threads'],
+            'n_batch': settings['n_batch'],
+            'n_gpu_layers': settings['n_gpu_layers'] if cuda_available else 0,
+            'verbose': settings['verbose']
+        }
+
+        # Загружаем модель (с Hugging Face или локально)
+        if repo_id and filename:
+            print(f"Загрузка модели {repo_id}/{filename} из Hugging Face...")
+            # Создаем экземпляр Llama напрямую
+            llm_raw = Llama.from_pretrained(
+                repo_id=repo_id,
+                filename=filename,
+                **model_kwargs
+            )
+            
+            # Оборачиваем в ChatLlamaCpp для совместимости с LangChain
+            # Сохраняем путь к загруженной модели
+            model_path = llm_raw.model_path
+            
             llm = ChatLlamaCpp(
                 model_path=model_path,
-                n_ctx=settings['n_ctx'],
-                n_threads=settings['n_threads'],
-                n_batch=settings['n_batch'],
-                n_gpu_layers=0,
-                verbose=settings['verbose']
+                **model_kwargs
             )
-            print("Модель успешно загружена на CPU.")
-            return llm
+            print(f"Модель успешно загружена из Hugging Face.")
+            
+        elif local_model_path:
+            print(f"Загрузка локальной модели из {local_model_path}...")
+            llm = ChatLlamaCpp(
+                model_path=local_model_path,
+                **model_kwargs
+            )
+            print(f"Локальная модель успешно загружена.")
+        else:
+            raise ValueError("Необходимо указать либо (repo_id и filename), либо local_model_path")
+
+        return llm
                 
     except Exception as e:
         print(f"Ошибка загрузки LLM: {e}")
         raise
 
-#Передача переменной для доступа к функциям LLM.
+# Для обратной совместимости
+def load_model(model_path: str):
+    """
+    Загружает локальную модель (для обратной совместимости)
+    """
+    return load_model_from_hf(local_model_path=model_path, repo_id=None, filename=None)
+
+# Передача переменной для доступа к функциям LLM.
 def get_llm():
     global llm
     if llm is None:
-        raise ValueError("Модель не загружена. Сначала вызовите load_model().")
+        raise ValueError("Модель не загружена. Сначала вызовите load_model_from_hf() или load_model().")
     return llm
