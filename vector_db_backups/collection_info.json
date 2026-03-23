@@ -1,11 +1,11 @@
 {
   "collection_name": "upgo_database_schema",
-  "created_at": "2026-02-12T14:26:33.656547",
-  "total_documents": 595,
+  "created_at": "2026-03-23T15:49:53.189230",
+  "total_documents": 457,
   "document_types": {
     "database_overview": 1,
     "table_info": 455,
-    "sample_data": 139
+    "sample_data": 1
   },
   "tables_covered": [],
   "statistics": {
@@ -14,7 +14,7 @@
     "table_structures": 0,
     "table_relations": 0,
     "total_tables": 455,
-    "total_columns": 3922,
-    "total_rows": 11965336
+    "total_columns": 3864,
+    "total_rows": 1
   }
 }

@@ -36,6 +36,10 @@ def get_llm_sql_answer_with_rag(data: QuestionSQL_TOOL_CHAIN):
     """
     return llmDAO.get_llm_sql_answer_with_rag_only(data)
 
+@app.post("/getllmsqlanswerwithtoolchainrag")
+def get_llm_answer_with_to0l_chain_rag(data: QuestionSQL_TOOL_CHAIN):
+    return llmDAO.get_llm_sql_answer_with_tool_and_chain_and_RAG(data)
+
 @app.post("/getragcontext")
 def get_rag_context(data: QuestionSQL_TOOL):
     """

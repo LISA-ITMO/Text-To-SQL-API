@@ -29,7 +29,11 @@ class AgentState(TypedDict):
 #Нода агента с формированием промпта для вызова функции и возвращения JSON с состоянием агента
 def agent_node(state: AgentState) -> AgentState:
     llm = get_llm()
-    context = toolDAO.connect_and_get_all_tables_info()
+    if state["context"] == '':
+        context = toolDAO.connect_and_get_all_tables_info()
+    else:
+        context = state["context"]
+
 
     '''model_with_tools = llm.bind_tools([toolDAO.connect_and_get_all_tables_info])
     response = model_with_tools.invoke("Какие таблицы и их столбцы в скобках есть у меня в базе данных? Выведи их без перевода на русский язык.")
@@ -86,7 +90,7 @@ def tool_node(state: AgentState) -> AgentState:
 #Последняя нода получающая контекст и вызывающая генерацию SQL-запроса по alpaca prompt
 def sql_generation_node(state: AgentState) -> AgentState:
     llm = get_llm()
-    alpaca_prompt = """Below is an instruction that describes a task, paired with an input that provides further context. Write a response that appropriately completes the request.
+    alpaca_prompt = """Below is an instruction that describes a task, paired with an input that provides further context. Write a response that appropriately completes the request. Use tables ONLY from Input Company database. Be accurate and use only relevant table names and column names.
 
     ### Instruction:
     SQL Prompt: {}
@@ -103,7 +107,7 @@ def sql_generation_node(state: AgentState) -> AgentState:
             state.get("context"),
             "",
             ),
-        max_tokens=64,
+        max_tokens=264,
         temperature=0.2)
     
     final_answer = validate_sql(response.content) 
@@ -157,7 +161,7 @@ class llmDAO():
                     data.llm_context,
                     "",
                     ),
-                max_tokens=64,
+                max_tokens=264,
                 temperature=0.2)
             
             final_answer = validate_sql(response.content) 
@@ -176,8 +180,8 @@ class llmDAO():
         try:
             response = llm.invoke(
                 data.llm_prompt,
-                max_tokens=128,
-                temperature=0.6)
+                max_tokens=264,
+                temperature=0.2)
             return response.content
             
         except Exception as e:
@@ -220,8 +224,8 @@ class llmDAO():
                 response_provider[0]["arguments"]["content"],
                 "",
                 ),
-            max_tokens=64,
-            temperature=0.6)
+            max_tokens=264,
+            temperature=0.2)
 
             result = response['choices'][0]['text']
             valedate_answer = validate_sql(response.content) 
@@ -344,7 +348,7 @@ class llmDAO():
             "context": rag_context,  # Используем контекст из RAG
             "final_answer": "",
         })
-        return (result["final_answer"], result["context"], result["function_to_call"])
+        return (result["final_answer"], result["context"], result["function_to_call"], result["sql"])
 
     # Добавим новый метод для прямого использования RAG без графа
     @staticmethod
@@ -371,32 +375,29 @@ class llmDAO():
                     rag_context = f"Не удалось получить информацию о базе данных. Ошибка: {str(e)}"
 
             # Используем улучшенный промпт
-            alpaca_prompt = """Ты - эксперт по SQL и базе данных UPGO. Сгенерируй SQL запрос на основе предоставленной схемы базы данных.
+            alpaca_prompt = """Below is an instruction that describes a task, paired with an input that provides further context. Write a response that appropriately completes the request. Use tables ONLY from Input Company database. Be accurate and use only relevant table names and column names.
 
-    СХЕМА БАЗЫ ДАННЫХ:
-    {}
+        ### Instruction:
+        SQL Prompt: {}
 
-    ВОПРОС ПОЛЬЗОВАТЕЛЯ:
-    {}
+        ### Input:
+        Company database: {}
 
-    ИНСТРУКЦИИ:
-    1. Используй ТОЛЬКО таблицы и столбцы из предоставленной схемы
-    2. Если информации недостаточно, верни SELECT NULL
-    3. Будь точным и используй правильные имена таблиц и столбцов
-
-    SQL ЗАПРОС:"""
-
+        ### Response:
+        SQL: {}
+        """
             # Форматируем промпт
             formatted_prompt = alpaca_prompt.format(
                 rag_context,
-                data.llm_prompt
+                data.llm_prompt,
+                ""
             )
 
             # Генерируем SQL
             response = llm.invoke(
                 formatted_prompt,
-                max_tokens=150,
-                temperature=0.1,
+                max_tokens=264,
+                temperature=0.2,
                 stop=[";"]
             )
 
