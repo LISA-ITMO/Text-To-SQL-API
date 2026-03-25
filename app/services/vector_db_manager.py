@@ -12,7 +12,7 @@ logger = logging.getLogger(__name__)
 class VectorDatabaseManager:
     """Менеджер векторной базы данных Qdrant"""
 
-    def __init__(self, qdrant_url: str = "http://localhost:6333",
+    def __init__(self, qdrant_url: str = "http://qdrant:6333",
                  collection_name: str = "upgo_database_schema"):
         self.qdrant_url = qdrant_url
         self.collection_name = collection_name

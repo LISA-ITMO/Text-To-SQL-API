@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 class DatabaseConnector:
     """Класс для подключения к PostgreSQL базе данных upgo"""
 
-    def __init__(self, host='localhost', port=5432, database='upgo_test_02',
+    def __init__(self, host='host.docker.internal', port=5432, database='upgo_test_02',
                  user='postgres', password='12345'):
         self.host = host
         self.port = port

@@ -32,9 +32,6 @@ RUN add-apt-repository ppa:deadsnakes/ppa && \
         --index-url https://pypi.tuna.tsinghua.edu.cn/simple \
         pip setuptools wheel
 
-# Проверяем установку Python и pip (опционально, для отладки)
-RUN python3.12 --version && python3.12 -m pip --version
-
 # Копируем файлы проекта
 COPY . .
 

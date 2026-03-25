@@ -1,7 +1,7 @@
 import os
 import warnings
 import subprocess
-from langchain_community.chat_models import ChatLlamaCpp
+from langchain_community.chat_models import ChatLlamaCpp, ChatOpenAI
 from llama_cpp import Llama
 
 llm = None
@@ -202,9 +202,29 @@ def load_model(model_path: str):
     """
     return load_model_from_hf(local_model_path=model_path, repo_id=None, filename=None)
 
+#Загрузка модели с локального или облачного сервера 
+def load_model_from_server(url:str, api_key: str = None, model: str = "NoName"):
+    """
+    Загружает модель с локального или облачного сервера
+    """
+    global llm
+    try:
+        llm = ChatOpenAI(
+            base_url=url,
+            api_key=api_key,
+            model=model,
+            temperature=0.5,
+            max_tokens=512
+        )
+        print(f"Соединение с сервером LLM успешно установлено.")
+        return llm
+    except Exception as e:
+        print(f"Ошибка при подключении к серверу с LLM: {e}")
+        return None 
+    
 # Передача переменной для доступа к функциям LLM.
 def get_llm():
     global llm
     if llm is None:
-        raise ValueError("Модель не загружена. Сначала вызовите load_model_from_hf() или load_model().")
+        raise ValueError("Модель не загружена. Сначала вызовите load_model_from_hf() или load_model() или load_model_from_llamacpp_server().")
     return llm
