@@ -51,4 +51,4 @@ RUN pip3.12 install --no-cache-dir torch==2.5.1+cu124 torchvision torchaudio \
     --index-url https://download.pytorch.org/whl/cu124
 
 # В CMD тоже используем python3.12 (исправлено для предупреждения)
-CMD ["sh", "-c", "echo \"1\" | python3.12 ./app/upgo_rag_system/setup_rag.py && python3.12 -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload"]
+CMD ["python3.12", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
