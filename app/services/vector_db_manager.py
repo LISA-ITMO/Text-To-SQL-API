@@ -12,11 +12,10 @@ logger = logging.getLogger(__name__)
 class VectorDatabaseManager:
     """Менеджер векторной базы данных Qdrant"""
 
-    def __init__(self, qdrant_url: str = "http://qdrant:6333",
-                 collection_name: str = "upgo_database_schema"):
-        self.qdrant_url = qdrant_url
-        self.collection_name = collection_name
-        self.backup_dir = "vector_db_backups"
+    def __init__(self, qdrant_url=None, collection_name=None):
+        self.qdrant_url = qdrant_url or os.getenv('QDRANT_URL', 'http://qdrant:6333')
+        self.collection_name = collection_name or os.getenv('QDRANT_COLLECTION_NAME', 'upgo_database_schema')
+        self.backup_dir = os.getenv('QDRANT_BACKUP_DIR', 'vector_db_backups')
         os.makedirs(self.backup_dir, exist_ok=True)
 
     def check_connection(self) -> bool:
