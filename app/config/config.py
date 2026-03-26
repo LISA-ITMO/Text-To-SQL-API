@@ -17,18 +17,19 @@ def str_to_list(s, sep=','):
         return []
     return [item.strip() for item in s.split(sep)]
 
-# Database
+
+# Database configuration
 DB_CONFIG = {
-    'host': os.getenv('DB_HOST', 'localhost'),
+    'host': os.getenv('DB_HOST', 'host.docker.internal'),
     'port': int(os.getenv('DB_PORT', 5432)),
-    'database': os.getenv('DB_NAME', 'upgo'),
+    'database': os.getenv('DB_NAME', 'upgo_test_02'),
     'user': os.getenv('DB_USER', 'postgres'),
-    'password': os.getenv('DB_PASSWORD', 'postgres')
+    'password': os.getenv('DB_PASSWORD', '12345')
 }
 
-# Qdrant
+# Qdrant vector database
 QDRANT_CONFIG = {
-    'url': os.getenv('QDRANT_URL', 'http://localhost:6333'),
+    'url': os.getenv('QDRANT_URL', 'http://qdrant:6333'),
     'collection_name': os.getenv('QDRANT_COLLECTION_NAME', 'upgo_database_schema'),
     'backup_dir': os.getenv('QDRANT_BACKUP_DIR', 'vector_db_backups'),
     'batch_size': int(os.getenv('QDRANT_BATCH_SIZE', 50)),
@@ -36,19 +37,20 @@ QDRANT_CONFIG = {
     'search_limit': int(os.getenv('QDRANT_SEARCH_LIMIT', 30))
 }
 
-# Embeddings
+# Embeddings model
 MODEL_CONFIG = {
     'model_name': os.getenv('EMBEDDINGS_MODEL_NAME', 'intfloat/multilingual-e5-large-instruct'),
     'dimension': int(os.getenv('EMBEDDINGS_DIMENSION', 1024))
 }
 
-# RAG основные параметры
+# RAG general settings
 RAG_CONFIG = {
     'answer_limit_tables': int(os.getenv('RAG_ANSWER_LIMIT_TABLES', 5)),
     'max_predicted_tables': int(os.getenv('RAG_MAX_PREDICTED_TABLES', 3)),
     'max_predicted_columns': int(os.getenv('RAG_MAX_PREDICTED_COLUMNS', 3)),
     'use_lemmatizer': str_to_bool(os.getenv('RAG_USE_LEMMATIZER', 'true')),
-    'stop_words': str_to_list(os.getenv('RAG_STOP_WORDS', 'и,в,во,не,что,он,на,я,с,со,как,а,то,все,она,так,его,но,да,ты,к,у,же,вы,за,бы,по,только,ее,мне,было,вот,от,меня,еще,нет,о,из,ему,теперь,когда,даже,ну,вдруг,ли,если,уже,или,ни,быть,был,него,до,вас,нибудь,опять,уж,вам,ведь,там,потом,себя,ничего,ей,может,они,тут,где,есть,надо,ней,для,мы,тебя,их,чем,была,сам,чтоб,без,будто,чего,раз,тоже,себе,под,будет,ж,тогда,кто,этот,того,потому,этого,какой,совсем,ним,здесь,этом,один,почти,мой,тем,чтобы,нее,сейчас,были,куда,зачем,всех,никогда,можно,при,наконец,два,об,другой,хоть,после,над,больше,тот,через,эти,нас,про,всего,них,какая,много,разве,три,эту,моя,впрочем,хорошо,свою,этой,перед,иногда,лучше,чуть,том,нельзя,такой,им,более,всегда,конечно,всю,между')),
+    'stop_words': str_to_list(os.getenv('RAG_STOP_WORDS', 
+        'и,в,во,не,что,он,на,я,с,со,как,а,то,все,она,так,его,но,да,ты,к,у,же,вы,за,бы,по,только,ее,мне,было,вот,от,меня,еще,нет,о,из,ему,теперь,когда,даже,ну,вдруг,ли,если,уже,или,ни,быть,был,него,до,вас,нибудь,опять,уж,вам,ведь,там,потом,себя,ничего,ей,может,они,тут,где,есть,надо,ней,для,мы,тебя,их,чем,была,сам,чтобы,без,будто,чего,раз,тоже,себе,под,будет,ж,тогда,кто,этот,того,потому,этого,какой,совсем,ним,здесь,этом,один,почти,мой,тем,чтобы,нее,сейчас,были,куда,зачем,всех,никогда,можно,при,наконец,два,об,другой,хоть,после,над,больше,тот,через,эти,нас,про,всего,них,какая,много,разве,три,эту,моя,впрочем,хорошо,свою,этой,перед,иногда,лучше,чуть,том,нельзя,такой,им,более,всегда,конечно,всю,между')),
     'relevance_weights': {
         'table_match': float(os.getenv('RAG_RELEVANCE_WEIGHTS_TABLE_MATCH', 2.0)),
         'column_match': float(os.getenv('RAG_RELEVANCE_WEIGHTS_COLUMN_MATCH', 0.5)),
@@ -90,7 +92,7 @@ RAG_CONFIG = {
     }
 }
 
-# Lemmatizer
+# Lemmatizer settings
 LEMMATIZER_CONFIG = {
     'enabled': str_to_bool(os.getenv('LEMMATIZER_ENABLED', 'true')),
     'additional_stop_words': str_to_list(os.getenv('LEMMATIZER_ADDITIONAL_STOP_WORDS', ''))
@@ -103,7 +105,6 @@ LOGGING_CONFIG = {
     'format': os.getenv('LOGGING_FORMAT', '%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 }
 
-# Настройка логирования
 def setup_logging():
     logging.basicConfig(
         level=getattr(logging, LOGGING_CONFIG['level']),
