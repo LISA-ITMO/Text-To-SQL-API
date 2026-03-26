@@ -1,54 +1,38 @@
-FROM nvidia/cuda:12.4.1-runtime-ubuntu22.04
+FROM python:3.12-slim
 
-# Установка часового пояса, чтобы не зависала сборка
-ENV DEBIAN_FRONTEND=noninteractive
-ENV TZ=Europe/Moscow
-
-# Системные зависимости
-RUN apt-get update && apt-get install -y \
-    wget \
+# Установка системных зависимостей (минимально, для psycopg2-binary не нужно, но оставлено для совместимости)
+# Устанавливаем компилятор и необходимые инструменты для сборки llama-cpp-python
+RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
-    libreadline-dev \
-    liblzma-dev \
-    libssl-dev \
-    libffi-dev \
-    zlib1g-dev \
-    libsqlite3-dev \
+    cmake \
     libpq-dev \
-    software-properties-common \
     && rm -rf /var/lib/apt/lists/*
 
-# Устанавливаем Python 3.12 из deadsnakes
-RUN add-apt-repository ppa:deadsnakes/ppa && \
-    apt-get update && \
-    apt-get install -y python3.12 python3.12-dev python3.12-venv && \
-    # Создаём симлинки для удобства
-    ln -s /usr/bin/python3.12 /usr/local/bin/python3 && \
-    ln -s /usr/bin/python3.12 /usr/local/bin/python && \
-    # Устанавливаем pip через ensurepip (встроен в Python)
-    python3.12 -m ensurepip --upgrade && \
-    # Обновляем pip, setuptools и wheel через зеркало (ВАЖНО!)
-    python3.12 -m pip install --upgrade \
-        --index-url https://pypi.tuna.tsinghua.edu.cn/simple \
-        pip setuptools wheel
+# 1. Устанавливаем PyTorch через зеркало TUNA (CPU версия)
+#    Если нужна GPU, замените на нужный индекс CUDA (например, https://download.pytorch.org/whl/cu124)
+RUN pip install --no-cache-dir \
+    --index-url https://pypi.tuna.tsinghua.edu.cn/simple \
+    --trusted-host pypi.tuna.tsinghua.edu.cn \
+    torch==2.5.1
 
-# Копируем файлы проекта
+# 2. Устанавливаем llama-cpp-python (готовое колесо для CPU) – берём с официального индекса
+#    Для GPU замените cpu на cu124 (или другую версию CUDA)
+RUN pip install --no-cache-dir \
+    --index-url https://pypi.tuna.tsinghua.edu.cn/simple \
+    --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu \
+    --trusted-host pypi.tuna.tsinghua.edu.cn \
+    llama-cpp-python==0.3.16
+
+# Копируем код приложения
 COPY . .
 
-# СНАЧАЛА ставим llama-cpp-python с CUDA (исправленное зеркало)
-RUN pip3.12 install --no-cache-dir \
+# 5. Устанавливаем остальные зависимости через зеркало TUNA
+RUN pip install --no-cache-dir \
     --index-url https://pypi.tuna.tsinghua.edu.cn/simple \
-    --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu124 \
-    llama-cpp-python
-
-# ПОТОМ ставим остальные зависимости (используем то же зеркало)
-RUN pip3.12 install --no-cache-dir \
-    --index-url https://pypi.tuna.tsinghua.edu.cn/simple \
+    --trusted-host pypi.tuna.tsinghua.edu.cn \
+    --default-timeout=300 \
+    --retries=5 \
     -r requirements.txt
 
-# Torch CUDA
-RUN pip3.12 install --no-cache-dir torch==2.5.1+cu124 torchvision torchaudio \
-    --index-url https://download.pytorch.org/whl/cu124
-
-# В CMD тоже используем python3.12 (исправлено для предупреждения)
-CMD ["python3.12", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+# (Опционально) Запуск скрипта и uvicorn
+CMD ["sh", "-c", "echo \"1\" | python3.12 ./app/upgo_rag_system/setup_rag.py && python3.12 -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload"]
