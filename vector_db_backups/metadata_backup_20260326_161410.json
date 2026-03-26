@@ -1,0 +1,217 @@
+[
+  {
+    "content_hash": 905008608486231096,
+    "metadata": {
+      "type": "database_overview",
+      "database_name": "news_db",
+      "table_count": 6,
+      "total_rows": 10,
+      "total_columns": 31,
+      "postgres_version": "PostgreSQL 16.4",
+      "extraction_time": "2026-03-26T16:14:02.027904",
+      "schema_count": 1,
+      "category_count": 2
+    },
+    "content_preview": "БАЗА ДАННЫХ news_db\nВЕРСИЯ PostgreSQL PostgreSQL 16.4\nТАБЛИЦ 6\nЗАПИСЕЙ 10\nСТОЛБЦОВ 31\nВРЕМЯ СКАНИРОВАНИЯ 2026-03-26T16:14:02.027904\nСХЕМА public ТАБЛИЦ 6\nКАТЕГОРИИ ТАБЛИЦ\nother 2\nuser 4\nКЛЮЧЕВЫЕ ТАБЛИ"
+  },
+  {
+    "content_hash": -674354670826158284,
+    "metadata": {
+      "type": "table_info",
+      "schema": "public",
+      "table_name": "alembic_version",
+      "full_name": "public.alembic_version",
+      "category": "other",
+      "row_count": 1,
+      "column_count": 1,
+      "foreign_key_count": 0,
+      "index_count": 1,
+      "has_comment": false,
+      "has_foreign_keys": false,
+      "has_indexes": true,
+      "column_types": {
+        "version_num": "character varying"
+      }
+    },
+    "content_preview": "ТАБЛИЦА public.alembic_version\nКАТЕГОРИЯ other\nЗАПИСЕЙ 1\nСТОЛБЦОВ 1\nИНДЕКСОВ 1\nСТОЛБЦЫ\nversion_num character_varying NOT_NULL\nИНДЕКСЫ\nalembic_version_pkc version_num\nНАЗНАЧЕНИЕ общие_данные_справочник"
+  },
+  {
+    "content_hash": 6083215225371059107,
+    "metadata": {
+      "type": "table_info",
+      "schema": "public",
+      "table_name": "categories",
+      "full_name": "public.categories",
+      "category": "other",
+      "row_count": 0,
+      "column_count": 3,
+      "foreign_key_count": 0,
+      "index_count": 0,
+      "has_comment": false,
+      "has_foreign_keys": false,
+      "has_indexes": false,
+      "column_types": {
+        "category_id": "integer",
+        "name": "character varying",
+        "description": "character varying"
+      }
+    },
+    "content_preview": "ТАБЛИЦА public.categories\nКАТЕГОРИЯ other\nЗАПИСЕЙ 0\nСТОЛБЦОВ 3\nСТОЛБЦЫ\ncategory_id integer\nname character_varying\ndescription character_varying\nВОЗМОЖНЫЕ КЛЮЧИ category_id\nНАЗНАЧЕНИЕ связующая_таблица"
+  },
+  {
+    "content_hash": 2505846847336333111,
+    "metadata": {
+      "type": "table_info",
+      "schema": "public",
+      "table_name": "comments",
+      "full_name": "public.comments",
+      "category": "user",
+      "row_count": 3,
+      "column_count": 5,
+      "foreign_key_count": 2,
+      "index_count": 1,
+      "has_comment": false,
+      "has_foreign_keys": true,
+      "has_indexes": true,
+      "column_types": {
+        "comment_id": "integer",
+        "text": "text",
+        "pub_date": "date",
+        "id_new": "integer",
+        "id_author": "integer"
+      },
+      "referenced_tables": [
+        "public.users",
+        "public.news"
+      ]
+    },
+    "content_preview": "ТАБЛИЦА public.comments\nКАТЕГОРИЯ user\nЗАПИСЕЙ 3\nСТОЛБЦОВ 5\nСВЯЗЕЙ 2\nИНДЕКСОВ 1\nСТОЛБЦЫ\ncomment_id integer NOT_NULL DEFAULT_nextval('comments_comment_id_s\ntext text NOT_NULL\npub_date date NOT_NULL\nid_"
+  },
+  {
+    "content_hash": -4358502640294269420,
+    "metadata": {
+      "type": "sample_data",
+      "schema": "public",
+      "table_name": "comments",
+      "full_name": "public.comments",
+      "sample_count": 2,
+      "column_count": 5,
+      "data_available": true
+    },
+    "content_preview": "ДАННЫЕ ТАБЛИЦЫ public.comments\nСТРУКТУРА\ncomment_id integer NOT_NULL\ntext text NOT_NULL\npub_date date NOT_NULL\nid_new integer NOT_NULL\nid_author integer NOT_NULL\nПРИМЕРЫ\nЗАПИСЬ_1 comment_id=1 text=Неп"
+  },
+  {
+    "content_hash": -3848951520976174117,
+    "metadata": {
+      "type": "table_info",
+      "schema": "public",
+      "table_name": "news",
+      "full_name": "public.news",
+      "category": "user",
+      "row_count": 2,
+      "column_count": 6,
+      "foreign_key_count": 1,
+      "index_count": 1,
+      "has_comment": false,
+      "has_foreign_keys": true,
+      "has_indexes": true,
+      "column_types": {
+        "new_id": "integer",
+        "header": "character varying",
+        "content": "json",
+        "pub_date": "date",
+        "cover": "character varying",
+        "id_author": "integer"
+      },
+      "referenced_tables": [
+        "public.users"
+      ]
+    },
+    "content_preview": "ТАБЛИЦА public.news\nКАТЕГОРИЯ user\nЗАПИСЕЙ 2\nСТОЛБЦОВ 6\nСВЯЗЕЙ 1\nИНДЕКСОВ 1\nСТОЛБЦЫ\nnew_id integer NOT_NULL DEFAULT_nextval('news_new_id_seq'::reg\nheader character_varying NOT_NULL\ncontent json NOT_NU"
+  },
+  {
+    "content_hash": -8176959132122115314,
+    "metadata": {
+      "type": "sample_data",
+      "schema": "public",
+      "table_name": "news",
+      "full_name": "public.news",
+      "sample_count": 2,
+      "column_count": 6,
+      "data_available": true
+    },
+    "content_preview": "ДАННЫЕ ТАБЛИЦЫ public.news\nСТРУКТУРА\nnew_id integer NOT_NULL\nheader character varying NOT_NULL\ncontent json NOT_NULL\npub_date date NOT_NULL\ncover character varying\nid_author integer NOT_NULL\nПРИМЕРЫ\nЗ"
+  },
+  {
+    "content_hash": 715587668445441248,
+    "metadata": {
+      "type": "table_info",
+      "schema": "public",
+      "table_name": "refreshsessions",
+      "full_name": "public.refreshsessions",
+      "category": "user",
+      "row_count": 0,
+      "column_count": 6,
+      "foreign_key_count": 1,
+      "index_count": 2,
+      "has_comment": false,
+      "has_foreign_keys": true,
+      "has_indexes": true,
+      "column_types": {
+        "refsess_id": "integer",
+        "user_id": "integer",
+        "refresh_token": "character varying",
+        "user_agent": "text",
+        "created_at": "timestamp with time zone",
+        "expires_at": "timestamp with time zone"
+      },
+      "referenced_tables": [
+        "public.users"
+      ]
+    },
+    "content_preview": "ТАБЛИЦА public.refreshsessions\nКАТЕГОРИЯ user\nЗАПИСЕЙ 0\nСТОЛБЦОВ 6\nСВЯЗЕЙ 1\nИНДЕКСОВ 2\nСТОЛБЦЫ\nrefsess_id integer NOT_NULL DEFAULT_nextval('refreshsessions_refse\nuser_id integer NOT_NULL\nrefresh_token"
+  },
+  {
+    "content_hash": -2135968156163543153,
+    "metadata": {
+      "type": "table_info",
+      "schema": "public",
+      "table_name": "users",
+      "full_name": "public.users",
+      "category": "user",
+      "row_count": 4,
+      "column_count": 10,
+      "foreign_key_count": 0,
+      "index_count": 2,
+      "has_comment": false,
+      "has_foreign_keys": false,
+      "has_indexes": true,
+      "column_types": {
+        "user_id": "integer",
+        "name": "character varying",
+        "email": "character varying",
+        "reg_date": "date",
+        "isverified": "boolean",
+        "avatar": "character varying",
+        "password_hash": "character varying",
+        "isadmin": "boolean",
+        "github_id": "character varying",
+        "role": "character varying"
+      }
+    },
+    "content_preview": "ТАБЛИЦА public.users\nКАТЕГОРИЯ user\nЗАПИСЕЙ 4\nСТОЛБЦОВ 10\nИНДЕКСОВ 2\nСТОЛБЦЫ\nuser_id integer NOT_NULL DEFAULT_nextval('users_user_id_seq'::r\nname character_varying NOT_NULL\nemail character_varying NOT"
+  },
+  {
+    "content_hash": 7383911456875558254,
+    "metadata": {
+      "type": "sample_data",
+      "schema": "public",
+      "table_name": "users",
+      "full_name": "public.users",
+      "sample_count": 2,
+      "column_count": 10,
+      "data_available": true
+    },
+    "content_preview": "ДАННЫЕ ТАБЛИЦЫ public.users\nСТРУКТУРА\nuser_id integer NOT_NULL\nname character varying NOT_NULL\nemail character varying NOT_NULL\nreg_date date NOT_NULL\nisverified boolean NOT_NULL\navatar character vary"
+  }
+]

@@ -1,10 +1,12 @@
 # database_connector.py
 import logging
+import os
 from datetime import datetime, date
 from typing import List, Dict, Any, Optional
 from tqdm import tqdm
 import psycopg2
 from psycopg2.extras import RealDictCursor
+from pathlib import Path
 
 logger = logging.getLogger(__name__)
 
@@ -13,11 +15,11 @@ class DatabaseConnector:
 
     def __init__(self, host=None, port=None, database=None,
                  user=None, password=None):
-        self.host = host or os.getenv('DB_HOST', 'host.docker.internal')
-        self.port = port or int(os.getenv('DB_PORT', 5432))
-        self.database = database or os.getenv('DB_NAME', 'upgo_test_02')
-        self.user = user or os.getenv('DB_USER', 'postgres')
-        self.password = password or os.getenv('DB_PASSWORD', '12345')
+        self.host = host or os.getenv('DB_HOST')
+        self.port = port or int(os.getenv('DB_PORT'))
+        self.database = database or os.getenv('DB_NAME')
+        self.user = user or os.getenv('DB_USER')
+        self.password = password or os.getenv('DB_PASSWORD')
         self.connection = None
 
     def connect(self) -> bool:

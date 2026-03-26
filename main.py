@@ -8,8 +8,6 @@ from app.services.llm_service import load_model_from_hf, load_model, load_model_
 
 load_dotenv()
 
-
-
 app = FastAPI()
 
 app.mount('/static', StaticFiles(directory='app/static'), 'static')

@@ -192,7 +192,7 @@ async function submitFunction(event) {
     showTypingIndicator();
 
     try {
-        const response = await fetch('/LLM/getllmanswerwithtoolandchain', {
+        const response = await fetch('/LLM/getllmsqlanswerwithtoolchainrag', {
             method: 'POST',
             headers: {
                 'accept': 'application/json',

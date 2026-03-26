@@ -5,7 +5,10 @@
 
 import sys
 import os
+from dotenv import load_dotenv
 from pathlib import Path
+
+load_dotenv()
 
 # Добавляем пути для импорта
 current_dir = Path(__file__).parent.absolute()
