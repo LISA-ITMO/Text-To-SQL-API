@@ -15,8 +15,6 @@ class VectorDatabaseManager:
     def __init__(self, qdrant_url=None, collection_name=None):
         self.qdrant_url = qdrant_url or os.getenv('QDRANT_URL')
         self.collection_name = collection_name or os.getenv('QDRANT_COLLECTION_NAME')
-        self.backup_dir = os.getenv('QDRANT_BACKUP_DIR')
-        os.makedirs(self.backup_dir, exist_ok=True)
 
     def check_connection(self) -> bool:
         """Проверяет соединение с Qdrant"""
@@ -42,7 +40,7 @@ class VectorDatabaseManager:
             if not self._create_collection(embeddings_model.dimension):
                 return False
 
-            metadata_backup = self._backup_metadata(documents)
+            #metadata_backup = self._backup_metadata(documents)
 
             points = []
             for i, doc in enumerate(tqdm(documents, desc="Создание эмбеддингов")):
@@ -61,7 +59,7 @@ class VectorDatabaseManager:
             if not self._upload_points(points):
                 return False
 
-            self._save_collection_info(documents)
+            #self._save_collection_info(documents)
 
             logger.info("Схема БД успешно сохранена в Qdrant")
             self._print_statistics(documents)
@@ -106,76 +104,76 @@ class VectorDatabaseManager:
             logger.error(f"Ошибка создания коллекции: {e}")
             return False
 
-    def _backup_metadata(self, documents: List[Dict]) -> str:
-        """Создает резервную копию метаданных"""
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        backup_file = os.path.join(self.backup_dir, f"metadata_backup_{timestamp}.json")
+    # def _backup_metadata(self, documents: List[Dict]) -> str:
+    #     """Создает резервную копию метаданных"""
+    #     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    #     backup_file = os.path.join(self.backup_dir, f"metadata_backup_{timestamp}.json")
 
-        metadata_list = []
-        for doc in documents:
-            metadata_list.append({
-                "content_hash": hash(doc['content']),
-                "metadata": doc['metadata'],
-                "content_preview": doc['content'][:200]
-            })
+    #     metadata_list = []
+    #     for doc in documents:
+    #         metadata_list.append({
+    #             "content_hash": hash(doc['content']),
+    #             "metadata": doc['metadata'],
+    #             "content_preview": doc['content'][:200]
+    #         })
 
-        with open(backup_file, 'w', encoding='utf-8') as f:
-            json.dump(metadata_list, f, ensure_ascii=False, indent=2)
+    #     with open(backup_file, 'w', encoding='utf-8') as f:
+    #         json.dump(metadata_list, f, ensure_ascii=False, indent=2)
 
-        logger.info(f"Метаданные сохранены в {backup_file}")
-        return backup_file
+    #     logger.info(f"Метаданные сохранены в {backup_file}")
+    #     return backup_file
 
-    def _save_collection_info(self, documents: List[Dict]):
-        """Сохраняет информацию о коллекции"""
-        info_file = os.path.join(self.backup_dir, "collection_info.json")
+    # def _save_collection_info(self, documents: List[Dict]):
+    #     """Сохраняет информацию о коллекции"""
+    #     info_file = os.path.join(self.backup_dir, "collection_info.json")
 
-        collection_info = {
-            "collection_name": self.collection_name,
-            "created_at": datetime.now().isoformat(),
-            "total_documents": len(documents),
-            "document_types": {},
-            "tables_covered": set(),
-            "statistics": {
-                "database_overviews": 0,
-                "table_descriptions": 0,
-                "table_structures": 0,
-                "table_relations": 0,
-                "total_tables": 0,
-                "total_columns": 0,
-                "total_rows": 0
-            }
-        }
+    #     collection_info = {
+    #         "collection_name": self.collection_name,
+    #         "created_at": datetime.now().isoformat(),
+    #         "total_documents": len(documents),
+    #         "document_types": {},
+    #         "tables_covered": set(),
+    #         "statistics": {
+    #             "database_overviews": 0,
+    #             "table_descriptions": 0,
+    #             "table_structures": 0,
+    #             "table_relations": 0,
+    #             "total_tables": 0,
+    #             "total_columns": 0,
+    #             "total_rows": 0
+    #         }
+    #     }
 
-        for doc in documents:
-            metadata = doc['metadata']
-            doc_type = metadata.get('type', 'unknown')
+    #     for doc in documents:
+    #         metadata = doc['metadata']
+    #         doc_type = metadata.get('type', 'unknown')
 
-            collection_info["document_types"][doc_type] = collection_info["document_types"].get(doc_type, 0) + 1
+    #         collection_info["document_types"][doc_type] = collection_info["document_types"].get(doc_type, 0) + 1
 
-            if doc_type == 'database_overview':
-                collection_info["statistics"]["database_overviews"] += 1
-                collection_info["statistics"]["total_rows"] += metadata.get('total_rows', 0)
-                collection_info["statistics"]["total_columns"] += metadata.get('total_columns', 0)
-                collection_info["statistics"]["total_tables"] = metadata.get('table_count', 0)
-            elif doc_type == 'table_description':
-                collection_info["statistics"]["table_descriptions"] += 1
-                table_name = metadata.get('full_name')
-                if table_name:
-                    collection_info["tables_covered"].add(table_name)
-                collection_info["statistics"]["total_rows"] += metadata.get('row_count', 0)
-                collection_info["statistics"]["total_columns"] += metadata.get('column_count', 0)
-            elif doc_type == 'table_structure':
-                collection_info["statistics"]["table_structures"] += 1
-                collection_info["statistics"]["total_columns"] += metadata.get('column_count', 0)
-            elif doc_type == 'table_relations':
-                collection_info["statistics"]["table_relations"] += 1
+    #         if doc_type == 'database_overview':
+    #             collection_info["statistics"]["database_overviews"] += 1
+    #             collection_info["statistics"]["total_rows"] += metadata.get('total_rows', 0)
+    #             collection_info["statistics"]["total_columns"] += metadata.get('total_columns', 0)
+    #             collection_info["statistics"]["total_tables"] = metadata.get('table_count', 0)
+    #         elif doc_type == 'table_description':
+    #             collection_info["statistics"]["table_descriptions"] += 1
+    #             table_name = metadata.get('full_name')
+    #             if table_name:
+    #                 collection_info["tables_covered"].add(table_name)
+    #             collection_info["statistics"]["total_rows"] += metadata.get('row_count', 0)
+    #             collection_info["statistics"]["total_columns"] += metadata.get('column_count', 0)
+    #         elif doc_type == 'table_structure':
+    #             collection_info["statistics"]["table_structures"] += 1
+    #             collection_info["statistics"]["total_columns"] += metadata.get('column_count', 0)
+    #         elif doc_type == 'table_relations':
+    #             collection_info["statistics"]["table_relations"] += 1
 
-        collection_info["tables_covered"] = list(collection_info["tables_covered"])
+    #     collection_info["tables_covered"] = list(collection_info["tables_covered"])
 
-        with open(info_file, 'w', encoding='utf-8') as f:
-            json.dump(collection_info, f, ensure_ascii=False, indent=2)
+    #     with open(info_file, 'w', encoding='utf-8') as f:
+    #         json.dump(collection_info, f, ensure_ascii=False, indent=2)
 
-        logger.info(f"Информация о коллекции сохранена в {info_file}")
+    #     logger.info(f"Информация о коллекции сохранена в {info_file}")
 
     def _upload_points(self, points: List[Dict]) -> bool:
         """Загружает точки в Qdrant"""

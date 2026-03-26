@@ -6,7 +6,8 @@ import logging
 from typing import Optional
 
 # Настройка логирования
-logging.basicConfig(level=logging.INFO)
+#logging.basicConfig(level=logging.INFO)
+logging.basicConfig(level=logging.WARNING)
 logger = logging.getLogger(__name__)
 
 # Глобальный экземпляр RAG системы
