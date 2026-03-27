@@ -3,3 +3,4 @@ __pycache__/
 .env
 server_test.py
 llm_env
+qdrant_data/
