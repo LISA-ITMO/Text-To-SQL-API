@@ -17,7 +17,7 @@ class UpgoRAGSystem:
         self.collection_name = collection_name or QDRANT_CONFIG['collection_name']
         self.qdrant_url = qdrant_url or QDRANT_CONFIG['url']
         model_name = model_name or MODEL_CONFIG['model_name']
-        self.model = SentenceTransformer(model_name)
+        self.model = SentenceTransformer(get_embeddings_model_path())
         self.model_name = model_name
 
         # Параметры из конфига

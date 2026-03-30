@@ -42,6 +42,39 @@ MODEL_CONFIG = {
     'model_name': os.getenv('EMBEDDINGS_MODEL_NAME', 'intfloat/multilingual-e5-large-instruct'),
     'dimension': int(os.getenv('EMBEDDINGS_DIMENSION', 1024))
 }
+def get_project_root():
+    """Возвращает корневую директорию проекта."""
+    return Path(__file__).parent.parent.parent
+
+
+def get_embeddings_model_path():
+    model_name = MODEL_CONFIG['model_name']
+    logger = logging.getLogger(__name__)
+
+
+    simple_name = model_name.replace('/', '--')
+    cached_name = f"models--{simple_name}"
+
+    # Проверяем оба варианта в папке models
+    for name in [simple_name, cached_name]:
+        base_dir = get_project_root() / 'models' / name
+        if base_dir.exists():
+            logger.info(f"Проверяем локальную модель по пути: {base_dir}")
+            snapshots_dir = base_dir / 'snapshots'
+            if snapshots_dir.exists():
+                snapshot_folders = [d for d in snapshots_dir.iterdir() if d.is_dir()]
+                if snapshot_folders:
+                    # Берём первую попавшуюся подпапку
+                    model_path = snapshot_folders[0]
+                    logger.info(f"Найдена локальная модель в кэше: {model_path}")
+                    return str(model_path)
+
+            if (base_dir / 'config.json').exists():
+                logger.info(f"Найдена локальная модель в папке: {base_dir}")
+                return str(base_dir)
+
+    logger.info(f"Локальная модель не найдена, загружаем из сети: {model_name}")
+    return model_name
 
 # RAG general settings
 RAG_CONFIG = {
