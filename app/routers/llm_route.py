@@ -8,6 +8,14 @@ app = APIRouter(prefix="/LLM")
 def get_llm_sql_answer(data:QuestionSQL):
     return(llmDAO.get_llm_sql_answer(data))
 
+@app.post('/getllmsqlanswer_streaming')
+def get_llm_sql_answer(data:QuestionSQL):
+    return(llmDAO.get_llm_sql_answer_str_on(data))
+
+@app.post('/getllmsqlanswer_no_streaming')
+def get_llm_sql_answer(data:QuestionSQL):
+    return(llmDAO.get_llm_sql_answer_str_off(data))
+
 @app.post('/getllmanswer')
 def get_llm_answer(data:Question):
     return(llmDAO.get_llm_answer(data))

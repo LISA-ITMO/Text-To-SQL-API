@@ -108,7 +108,8 @@ def sql_generation_node(state: AgentState) -> AgentState:
             "",
             ),
         max_tokens=264,
-        temperature=0.2)
+        temperature=0.2,
+        stream=True)
     
     final_answer = validate_sql(response.content) 
     if final_answer['Status']:
@@ -172,6 +173,78 @@ class llmDAO():
         
         except Exception as e:
             return (f"Ошибка работы LLM: {e}")
+        
+        #Метод для генерации SQL-запроса по предоставленным в полях промпта и контекста базы данных (включен стриминг)
+    @staticmethod
+    def get_llm_sql_answer_str_on(data:QuestionSQL) -> str:
+        llm = get_llm()
+        alpaca_prompt = """Below is an instruction that describes a task, paired with an input that provides further context. Write a response that appropriately completes the request.
+
+        ### Instruction:
+        SQL Prompt: {}
+
+        ### Input:
+        Company database: {}
+
+        ### Response:
+        SQL: {}
+        """
+
+        try:
+            response = llm.invoke(
+                alpaca_prompt.format(
+                    data.llm_prompt,
+                    data.llm_context,
+                    "",
+                    ),
+                max_tokens=264,
+                temperature=0.2,
+                stream=True)
+            
+            final_answer = validate_sql(response.content) 
+            if final_answer['Status']:
+                return final_answer['SQL']
+            else:
+                return final_answer['Error']
+        
+        except Exception as e:
+            return (f"Ошибка работы LLM: {e}")
+        
+        #Метод для генерации SQL-запроса по предоставленным в полях промпта и контекста базы данных (выключен стриминг)
+    @staticmethod
+    def get_llm_sql_answer_str_off(data:QuestionSQL) -> str:
+        llm = get_llm()
+        alpaca_prompt = """Below is an instruction that describes a task, paired with an input that provides further context. Write a response that appropriately completes the request.
+
+        ### Instruction:
+        SQL Prompt: {}
+
+        ### Input:
+        Company database: {}
+
+        ### Response:
+        SQL: {}
+        """
+
+        try:
+            response = llm.invoke(
+                alpaca_prompt.format(
+                    data.llm_prompt,
+                    data.llm_context,
+                    "",
+                    ),
+                max_tokens=264,
+                temperature=0.2,
+                stream=False)
+            
+            final_answer = validate_sql(response.content) 
+            if final_answer['Status']:
+                return final_answer['SQL']
+            else:
+                return final_answer['Error']
+        
+        except Exception as e:
+            return (f"Ошибка работы LLM: {e}")
 
     #Простой метод для генерации обычного ответа (не SQL-запроса)
     @staticmethod
@@ -181,7 +254,8 @@ class llmDAO():
             response = llm.invoke(
                 data.llm_prompt,
                 max_tokens=264,
-                temperature=0.2)
+                temperature=0.2,
+                stream=True)
             return response.content
             
         except Exception as e:
@@ -398,6 +472,7 @@ class llmDAO():
                 formatted_prompt,
                 max_tokens=264,
                 temperature=0.2,
+                stream=True,
                 stop=[";"]
             )
 
