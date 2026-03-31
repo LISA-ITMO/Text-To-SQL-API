@@ -6,7 +6,7 @@ import requests
 from sentence_transformers import SentenceTransformer
 from datetime import datetime
 
-from app.config.config import QDRANT_CONFIG, MODEL_CONFIG, RAG_CONFIG, LEMMATIZER_CONFIG
+from app.config.config import QDRANT_CONFIG, MODEL_CONFIG, RAG_CONFIG, LEMMATIZER_CONFIG, get_embeddings_model_path
 from app.models.lemmatizer import QueryLemmatizer
 from app.services.database_connector import DatabaseConnector
 
