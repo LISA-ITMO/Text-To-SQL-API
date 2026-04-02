@@ -8,28 +8,27 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# 1. Устанавливаем PyTorch через зеркало TUNA (CPU версия)
-#    Если нужна GPU, замените на нужный индекс CUDA (например, https://download.pytorch.org/whl/cu124)
+# 1. Устанавливаем PyTorch с CUDA 12.4 через Alibaba Cloud
 RUN pip install --no-cache-dir \
-    --index-url https://pypi.tuna.tsinghua.edu.cn/simple \
-    --trusted-host pypi.tuna.tsinghua.edu.cn \
-    torch==2.5.1
+    --index-url https://mirrors.aliyun.com/pypi/simple/ \
+    --trusted-host mirrors.aliyun.com \
+    torch==2.5.1+cu124 torchvision torchaudio \
+    -f https://download.pytorch.org/whl/cu124/torch_stable.html
 
-# 2. Устанавливаем llama-cpp-python (готовое колесо для CPU) – берём с официального индекса
-#    Для GPU замените cpu на cu124 (или другую версию CUDA)
+# 2. Устанавливаем llama-cpp-python с CUDA 12.4
 RUN pip install --no-cache-dir \
-    --index-url https://pypi.tuna.tsinghua.edu.cn/simple \
-    --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cpu \
-    --trusted-host pypi.tuna.tsinghua.edu.cn \
+    --index-url https://mirrors.aliyun.com/pypi/simple/ \
+    --trusted-host mirrors.aliyun.com \
+    --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu124 \
     llama-cpp-python==0.3.16
 
 # Копируем код приложения
 COPY . .
 
-# 5. Устанавливаем остальные зависимости через зеркало TUNA
+# 3. Устанавливаем остальные зависимости через Alibaba Cloud
 RUN pip install --no-cache-dir \
-    --index-url https://pypi.tuna.tsinghua.edu.cn/simple \
-    --trusted-host pypi.tuna.tsinghua.edu.cn \
+    --index-url https://mirrors.aliyun.com/pypi/simple/ \
+    --trusted-host mirrors.aliyun.com \
     --default-timeout=300 \
     --retries=5 \
     -r requirements.txt
