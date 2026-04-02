@@ -90,26 +90,12 @@ def tool_node(state: AgentState) -> AgentState:
 #Последняя нода получающая контекст и вызывающая генерацию SQL-запроса по alpaca prompt
 def sql_generation_node(state: AgentState) -> AgentState:
     llm = get_llm()
-    alpaca_prompt = """Below is an instruction that describes a task, paired with an input that provides further context. Write a response that appropriately completes the request. Use tables ONLY from Input Company database. Be accurate and use only relevant table names and column names.
-
-    ### Instruction:
-    SQL Prompt: {}
-
-    ### Input:
-    Company database: {}
-
-    ### Response:
-    SQL: {}
-    """
+    alpaca_prompt = f"You are SQL specialist. Generate an SQL query based on the Prompt and the context from Company database - SQL Prompt: {state.get("question")}, Company database: {state.get("context")}."
     response = llm.invoke(
-        alpaca_prompt.format(
-            state.get("question"),
-            state.get("context"),
-            "",
-            ),
-        max_tokens=264,
+        alpaca_prompt,
+        max_tokens=16384,
         temperature=0.2,
-        stream=True)
+        stream=False)
     
     final_answer = validate_sql(response.content) 
     if final_answer['Status']:
@@ -143,97 +129,12 @@ class llmDAO():
     @staticmethod
     def get_llm_sql_answer(data:QuestionSQL) -> str:
         llm = get_llm()
-        alpaca_prompt = """Below is an instruction that describes a task, paired with an input that provides further context. Write a response that appropriately completes the request.
-
-        ### Instruction:
-        SQL Prompt: {}
-
-        ### Input:
-        Company database: {}
-
-        ### Response:
-        SQL: {}
-        """
+        alpaca_prompt = f"You are SQL specialist. Generate an SQL query based on the Prompt and the context from Company database - SQL Prompt: {data.llm_prompt}, Company database: {data.llm_context}."
 
         try:
             response = llm.invoke(
-                alpaca_prompt.format(
-                    data.llm_prompt,
-                    data.llm_context,
-                    "",
-                    ),
-                max_tokens=264,
-                temperature=0.2)
-            
-            final_answer = validate_sql(response.content) 
-            if final_answer['Status']:
-                return final_answer['SQL']
-            else:
-                return final_answer['Error']
-        
-        except Exception as e:
-            return (f"Ошибка работы LLM: {e}")
-        
-        #Метод для генерации SQL-запроса по предоставленным в полях промпта и контекста базы данных (включен стриминг)
-    @staticmethod
-    def get_llm_sql_answer_str_on(data:QuestionSQL) -> str:
-        llm = get_llm()
-        alpaca_prompt = """Below is an instruction that describes a task, paired with an input that provides further context. Write a response that appropriately completes the request.
-
-        ### Instruction:
-        SQL Prompt: {}
-
-        ### Input:
-        Company database: {}
-
-        ### Response:
-        SQL: {}
-        """
-
-        try:
-            response = llm.invoke(
-                alpaca_prompt.format(
-                    data.llm_prompt,
-                    data.llm_context,
-                    "",
-                    ),
-                max_tokens=264,
-                temperature=0.2,
-                stream=True)
-            
-            final_answer = validate_sql(response.content) 
-            if final_answer['Status']:
-                return final_answer['SQL']
-            else:
-                return final_answer['Error']
-        
-        except Exception as e:
-            return (f"Ошибка работы LLM: {e}")
-        
-        #Метод для генерации SQL-запроса по предоставленным в полях промпта и контекста базы данных (выключен стриминг)
-    @staticmethod
-    def get_llm_sql_answer_str_off(data:QuestionSQL) -> str:
-        llm = get_llm()
-        alpaca_prompt = """Below is an instruction that describes a task, paired with an input that provides further context. Write a response that appropriately completes the request.
-
-        ### Instruction:
-        SQL Prompt: {}
-
-        ### Input:
-        Company database: {}
-
-        ### Response:
-        SQL: {}
-        """
-
-        try:
-            response = llm.invoke(
-                alpaca_prompt.format(
-                    data.llm_prompt,
-                    data.llm_context,
-                    "",
-                    ),
-                max_tokens=264,
+                alpaca_prompt,
+                max_tokens=16384,
                 temperature=0.2,
                 stream=False)
             
@@ -245,7 +146,7 @@ class llmDAO():
         
         except Exception as e:
             return (f"Ошибка работы LLM: {e}")
-
+        
     #Простой метод для генерации обычного ответа (не SQL-запроса)
     @staticmethod
     def get_llm_answer(data:Question):
@@ -253,9 +154,9 @@ class llmDAO():
         try:
             response = llm.invoke(
                 data.llm_prompt,
-                max_tokens=264,
+                max_tokens=16384,
                 temperature=0.2,
-                stream=True)
+                stream=False)
             return response.content
             
         except Exception as e:
@@ -265,17 +166,7 @@ class llmDAO():
     @staticmethod
     def get_llm_sql_answer_with_tool(data:QuestionSQL):
         llm_model = get_llm()
-        alpaca_prompt = """Below is an instruction that describes a task, paired with an input that provides further context. Write a response that appropriately completes the request.
-
-        ### Instruction:
-        SQL Prompt: {}
-
-        ### Input:
-        Company database: {}
-
-        ### Response:
-        SQL: {}
-        """
+        alpaca_prompt = f"You are SQL specialist. Generate an SQL query based on the Prompt and the context from Company database - SQL Prompt: {data.llm_prompt}, Company database: {data.llm_context}."
         llm_provider = LlamaCppPythonProvider(llm_model)
         settings = llm_provider.get_provider_default_settings()
         settings.temperature = 0.2
@@ -293,13 +184,10 @@ class llmDAO():
         
         try:
             response = llm_model(
-            alpaca_prompt.format(
-                data.llm_prompt,
-                response_provider[0]["arguments"]["content"],
-                "",
-                ),
-            max_tokens=264,
-            temperature=0.2)
+            alpaca_prompt,
+            max_tokens=16384,
+            temperature=0.2,
+            stream=False)
 
             result = response['choices'][0]['text']
             valedate_answer = validate_sql(response.content) 
@@ -449,30 +337,15 @@ class llmDAO():
                     rag_context = f"Не удалось получить информацию о базе данных. Ошибка: {str(e)}"
 
             # Используем улучшенный промпт
-            alpaca_prompt = """Below is an instruction that describes a task, paired with an input that provides further context. Write a response that appropriately completes the request. Use tables ONLY from Input Company database. Be accurate and use only relevant table names and column names.
+            alpaca_prompt = f"You are SQL specialist. Generate an SQL query based on the Prompt and the context from Company database - SQL Prompt: {data.llm_prompt}, Company database: {rag_context}."
 
-        ### Instruction:
-        SQL Prompt: {}
-
-        ### Input:
-        Company database: {}
-
-        ### Response:
-        SQL: {}
-        """
-            # Форматируем промпт
-            formatted_prompt = alpaca_prompt.format(
-                rag_context,
-                data.llm_prompt,
-                ""
-            )
 
             # Генерируем SQL
             response = llm.invoke(
-                formatted_prompt,
-                max_tokens=264,
+                alpaca_prompt,
+                max_tokens=16384,
                 temperature=0.2,
-                stream=True,
+                stream=False,
                 stop=[";"]
             )
 
