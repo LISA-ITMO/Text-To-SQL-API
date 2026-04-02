@@ -213,7 +213,7 @@ def load_model_from_server(url:str, api_key: str = None, model: str = "NoName"):
             base_url=url,
             api_key=api_key,
             model=model,
-            temperature=0.2,
+            temperature=0.1,
             max_tokens=16384
         )
         print(f"Соединение с сервером LLM успешно установлено.")
