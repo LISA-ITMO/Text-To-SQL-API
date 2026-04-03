@@ -1,7 +1,5 @@
 FROM python:3.12-slim
 
-# Установка системных зависимостей (минимально, для psycopg2-binary не нужно, но оставлено для совместимости)
-# Устанавливаем компилятор и необходимые инструменты для сборки llama-cpp-python
 # Установка системных зависимостей
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
@@ -9,28 +7,35 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# 1. Устанавливаем PyTorch через зеркало Alibaba Cloud (CPU версия)
-RUN pip install --no-cache-dir \
-    --index-url https://mirrors.aliyun.com/pypi/simple/ \
-    --trusted-host mirrors.aliyun.com \
-    torch==2.5.1 torchvision torchaudio
+# Копируем папку с предварительно скачанными wheel-файлами
+COPY ./wheel-packages /wheel_packages
 
-# 2. Устанавливаем llama-cpp-python через Alibaba Cloud
+# 1. Устанавливаем PyTorch и связанные пакеты из локальной папки
 RUN pip install --no-cache-dir \
-    --index-url https://mirrors.aliyun.com/pypi/simple/ \
-    --trusted-host mirrors.aliyun.com \
-    llama-cpp-python==0.3.16
+    --find-links=/wheel_packages \
+    torch==2.5.1+cpu \
+    torchvision==0.20.1+cpu \
+    torchaudio==2.5.1+cpu
 
-# Копируем код приложения
-COPY . .
+# 2. Устанавливаем llama-cpp-python из исходников (НЕ из локального wheel)
+RUN CMAKE_ARGS="-DLLAMA_METAL=OFF" pip install --no-cache-dir \
+    --default-timeout=300 \
+    --retries=5 \
+    llama-cpp-python==0.3.16 \
+    --force-reinstall \
+    --no-binary llama-cpp-python
 
-# 3. Устанавливаем остальные зависимости через Alibaba Cloud
+# Копируем requirements.txt (для кеширования)
+COPY requirements.txt .
+
+# 3. Устанавливаем остальные зависимости (используем ТО ЖЕ зеркало)
 RUN pip install --no-cache-dir \
-    --index-url https://mirrors.aliyun.com/pypi/simple/ \
-    --trusted-host mirrors.aliyun.com \
     --default-timeout=300 \
     --retries=5 \
     -r requirements.txt
 
-# (Опционально) Запуск скрипта и uvicorn
+# Копируем код приложения
+COPY . .
+
+# Запуск
 CMD ["sh", "-c", "echo \"1\" | python3.12 ./app/upgo_rag_system/setup_rag.py && python3.12 -m uvicorn main:app --host 0.0.0.0 --port 8000 --reload"]

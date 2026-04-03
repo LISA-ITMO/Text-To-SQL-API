@@ -100,7 +100,7 @@ def sql_generation_node(state: AgentState) -> AgentState:
         max_tokens=1024,
         temperature=0.1,
         stream=False,
-        stop = ["\n\n", "```", "Explanation:", "Answer:", "; --", ";"])
+        stop = ["Explanation:", "Answer:", "; --", ";"])
     
     final_answer = validate_sql(response.content) 
     if final_answer['Status']:
@@ -145,7 +145,7 @@ class llmDAO():
                 max_tokens=1024,
                 temperature=0.1,
                 stream=False,
-                stop = ["\n\n", "```", "Explanation:", "Answer:", "; --", ";"])
+                stop = ["Explanation:", "Answer:", "; --", ";"])
             
             final_answer = validate_sql(response.content) 
             if final_answer['Status']:
@@ -165,8 +165,7 @@ class llmDAO():
                 data.llm_prompt,
                 max_tokens=1024,
                 temperature=0.1,
-                stream=False,
-                stop = ["\n\n", "```", "Explanation:", "Answer:", "; --", ";"])
+                stream=False)
             return response.content
             
         except Exception as e:
@@ -200,7 +199,7 @@ class llmDAO():
             max_tokens=1024,
             temperature=0.1,
             stream=False,
-            stop = ["\n\n", "```", "Explanation:", "Answer:", "; --", ";"])
+            stop = ["Explanation:", "Answer:", "; --", ";"])
 
             result = response['choices'][0]['text']
             valedate_answer = validate_sql(response.content) 
@@ -362,7 +361,7 @@ class llmDAO():
                 max_tokens=1024,
                 temperature=0.1,
                 stream=False,
-                stop = ["\n\n", "```", "Explanation:", "Answer:", "; --", ";"])
+                stop = ["Explanation:", "Answer:", "; --", ";"])
 
             # Форматируем ответ
             sql_query = response.content if hasattr(response, 'content') else str(response)
