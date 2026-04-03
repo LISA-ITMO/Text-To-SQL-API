@@ -90,17 +90,19 @@ def tool_node(state: AgentState) -> AgentState:
 #Последняя нода получающая контекст и вызывающая генерацию SQL-запроса по alpaca prompt
 def sql_generation_node(state: AgentState) -> AgentState:
     llm = get_llm()
-    alpaca_prompt = f"""You are SQL specialist. Generate an SQL query based on the Prompt and the context from Company database.
+    alpaca_prompt = f"""You are SQL specialist. Do NOT output reasoning or thinking. Do NOT include <think> blocks. Only output SQL. Generate an SQL query based on the Prompt and the context from Company database.
     Prompt: {state.get('question')}
     Company database: {state.get('context')}
-    Output ONLY the SQL query. No explanations or text before/after."""
+    Output ONLY the SQL query. No explanations or text before/after. Do NOT explain anything. Do NOT add comments. Return ONLY SQL."""
 
     response = llm.invoke(
         alpaca_prompt,
         max_tokens=1024,
         temperature=0.1,
+        top_p=0.8,
         stream=False,
-        stop = ["Explanation:", "Answer:", "; --", ";"])
+        stop = ["Explanation:", "; --", ";"],
+        extra_body={"chat_template_kwargs": {"enable_thinking": False}})
     
     final_answer = validate_sql(response.content) 
     if final_answer['Status']:
@@ -134,20 +136,24 @@ class llmDAO():
     @staticmethod
     def get_llm_sql_answer(data:QuestionSQL) -> str:
         llm = get_llm()
-        alpaca_prompt = f"""You are SQL specialist. Generate an SQL query based on the Prompt and the context from Company database.
+        alpaca_prompt = f"""You are SQL specialist. Do NOT output reasoning or thinking. Do NOT include <think> blocks. Only output SQL. Generate an SQL query based on the Prompt and the context from Company database.
         Prompt: {data.llm_prompt}
         Company database: {data.llm_context}
-        Output ONLY the SQL query. No explanations or text before/after."""
+        Output ONLY the SQL query. No explanations or text before/after. Do NOT explain anything. Do NOT add comments. Return ONLY SQL."""
 
         try:
             response = llm.invoke(
                 alpaca_prompt,
                 max_tokens=1024,
                 temperature=0.1,
+                top_p=0.8,
                 stream=False,
-                stop = ["Explanation:", "Answer:", "; --", ";"])
+                stop = ["Explanation:", "; --", ";"],
+                extra_body={"chat_template_kwargs": {"enable_thinking": False}})
             
             final_answer = validate_sql(response.content) 
+            print("Полный ответ: ", response)
+            print("Content в ответе: ", response.content)
             if final_answer['Status']:
                 return final_answer['SQL']
             else:
@@ -175,10 +181,10 @@ class llmDAO():
     @staticmethod
     def get_llm_sql_answer_with_tool(data:QuestionSQL):
         llm_model = get_llm()
-        alpaca_prompt = f"""You are SQL specialist. Generate an SQL query based on the Prompt and the context from Company database.
+        alpaca_prompt = f"""You are SQL specialist. Do NOT output reasoning or thinking. Do NOT include <think> blocks. Only output SQL. Generate an SQL query based on the Prompt and the context from Company database.
         Prompt: {data.llm_prompt}
         Company database: {data.llm_context}
-        Output ONLY the SQL query. No explanations or text before/after."""
+        Output ONLY the SQL query. No explanations or text before/after. Do NOT explain anything. Do NOT add comments. Return ONLY SQL."""
         llm_provider = LlamaCppPythonProvider(llm_model)
         settings = llm_provider.get_provider_default_settings()
         settings.temperature = 0.1
@@ -198,8 +204,10 @@ class llmDAO():
             alpaca_prompt,
             max_tokens=1024,
             temperature=0.1,
+            top_p=0.8,
             stream=False,
-            stop = ["Explanation:", "Answer:", "; --", ";"])
+            stop = ["Explanation:", "; --", ";"],
+            extra_body={"chat_template_kwargs": {"enable_thinking": False}})
 
             result = response['choices'][0]['text']
             valedate_answer = validate_sql(response.content) 
@@ -349,10 +357,10 @@ class llmDAO():
                     rag_context = f"Не удалось получить информацию о базе данных. Ошибка: {str(e)}"
 
             # Используем улучшенный промпт
-            alpaca_prompt = f"""You are SQL specialist. Generate an SQL query based on the Prompt and the context from Company database.
+            alpaca_prompt = f"""You are SQL specialist. Do NOT output reasoning or thinking. Do NOT include <think> blocks. Only output SQL. Generate an SQL query based on the Prompt and the context from Company database.
             Prompt: {data.llm_prompt}
             Company database: {data.llm_context}
-            Output ONLY the SQL query. No explanations or text before/after."""
+            Output ONLY the SQL query. No explanations or text before/after. Do NOT explain anything. Do NOT add comments. Return ONLY SQL."""
 
 
             # Генерируем SQL
@@ -360,8 +368,10 @@ class llmDAO():
                 alpaca_prompt,
                 max_tokens=1024,
                 temperature=0.1,
+                top_p=0.8,
                 stream=False,
-                stop = ["Explanation:", "Answer:", "; --", ";"])
+                stop = ["Explanation:", "; --", ";"],
+                extra_body={"chat_template_kwargs": {"enable_thinking": False}})
 
             # Форматируем ответ
             sql_query = response.content if hasattr(response, 'content') else str(response)
