@@ -97,14 +97,21 @@ def sql_generation_node(state: AgentState) -> AgentState:
 
     response = llm.invoke(
         alpaca_prompt,
-        max_tokens=1024,
+        max_tokens=16384,
         temperature=0.1,
         top_p=0.8,
-        stream=False,
-        stop = ["Explanation:", "; --", ";"],
-        extra_body={"chat_template_kwargs": {"enable_thinking": False}})
+        stream=False)
+
+    response_text = response.content if hasattr(response, 'content') else ""
+
+    if not response_text or not response_text.strip():
+        if hasattr(response, 'additional_kwargs'):
+            reasoning = response.additional_kwargs.get('reasoning_content', '')
+            if reasoning:
+                response_text = reasoning
     
-    final_answer = validate_sql(response.content) 
+    final_answer = validate_sql(response_text)
+    
     if final_answer['Status']:
         return{
             **state,
@@ -144,23 +151,30 @@ class llmDAO():
         try:
             response = llm.invoke(
                 alpaca_prompt,
-                max_tokens=1024,
+                max_tokens=16384,
                 temperature=0.1,
                 top_p=0.8,
-                stream=False,
-                stop = ["Explanation:", "; --", ";"],
-                extra_body={"chat_template_kwargs": {"enable_thinking": False}})
+                stream=False
+            )
+
+            response_text = response.content if hasattr(response, 'content') else ""
+
+            if not response_text or not response_text.strip():
+                if hasattr(response, 'additional_kwargs'):
+                    reasoning = response.additional_kwargs.get('reasoning_content', '')
+                    if reasoning:
+                        response_text = reasoning
+                        print("INFO: Использован reasoning_content (content был пуст)")
+
+            final_answer = validate_sql(response_text)
             
-            final_answer = validate_sql(response.content) 
-            print("Полный ответ: ", response)
-            print("Content в ответе: ", response.content)
             if final_answer['Status']:
                 return final_answer['SQL']
             else:
                 return final_answer['Error']
-        
+            
         except Exception as e:
-            return (f"Ошибка работы LLM: {e}")
+            return f"Ошибка работы LLM: {e}"
         
     #Простой метод для генерации обычного ответа (не SQL-запроса)
     @staticmethod
@@ -169,8 +183,9 @@ class llmDAO():
         try:
             response = llm.invoke(
                 data.llm_prompt,
-                max_tokens=1024,
+                max_tokens=16384,
                 temperature=0.1,
+                top_p=0.8,
                 stream=False)
             return response.content
             
@@ -366,12 +381,10 @@ class llmDAO():
             # Генерируем SQL
             response = llm.invoke(
                 alpaca_prompt,
-                max_tokens=1024,
+                max_tokens=16384,
                 temperature=0.1,
                 top_p=0.8,
-                stream=False,
-                stop = ["Explanation:", "; --", ";"],
-                extra_body={"chat_template_kwargs": {"enable_thinking": False}})
+                stream=False)
 
             # Форматируем ответ
             sql_query = response.content if hasattr(response, 'content') else str(response)
