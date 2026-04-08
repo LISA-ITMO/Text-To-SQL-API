@@ -19,6 +19,112 @@ function getCurrentTime() {
     });
 }
 
+// Вспомогательная функция для экранирования HTML (с защитой от не-строк)
+function escapeHtml(str) {
+    if (str === undefined || str === null) return '';
+    const stringValue = String(str);
+    return stringValue
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+// Функция для проверки, является ли значение JSON-массивом
+function isJSONArray(data) {
+    if (!data) return false;
+    if (Array.isArray(data)) return true;
+    if (typeof data === 'string') {
+        const trimmed = data.trim();
+        if (!trimmed.startsWith('[')) return false;
+        try {
+            const parsed = JSON.parse(trimmed);
+            return Array.isArray(parsed);
+        } catch (e) {
+            return false;
+        }
+    }
+    return false;
+}
+
+// Функция для получения массива из данных
+function getJSONArray(data) {
+    if (Array.isArray(data)) return data;
+    if (typeof data === 'string') {
+        try {
+            const parsed = JSON.parse(data);
+            if (Array.isArray(parsed)) return parsed;
+        } catch (e) {}
+    }
+    return null;
+}
+
+// Функция для преобразования массива в красивый список с разделителями
+function arrayToFormattedList(jsonArray) {
+    if (!jsonArray || jsonArray.length === 0) {
+        return '<div class="list-empty">Нет данных для отображения</div>';
+    }
+    
+    let html = '<div class="data-list">';
+    
+    jsonArray.forEach((item, index) => {
+        // Разделитель между элементами (кроме первого)
+        if (index > 0) {
+            html += '<div class="list-separator">-------------------------------------------------------</div>';
+        }
+        
+        // Обрабатываем каждый элемент
+        if (typeof item === 'object' && item !== null) {
+            // Если элемент - объект, выводим только его значения (без ключей)
+            html += '<div class="list-item object-item">';
+            
+            // Получаем все значения объекта
+            const values = Object.values(item);
+            values.forEach(value => {
+                const displayValue = (value === undefined || value === null) ? '' : String(value);
+                if (displayValue) {
+                    html += `<div class="list-value">${escapeHtml(displayValue)}</div>`;
+                }
+            });
+            
+            html += '</div>';
+        } else {
+            // Если элемент - просто значение (строка, число и т.д.)
+            const displayValue = (item === undefined || item === null) ? '' : String(item);
+            if (displayValue) {
+                html += `<div class="list-item simple-item">${escapeHtml(displayValue)}</div>`;
+            }
+        }
+    });
+    
+    html += '</div>';
+    return html;
+}
+
+// Функция для форматирования сообщения (текст или список)
+function formatMessageContent(content) {
+    if (content === undefined || content === null) {
+        return '<div class="message-text">Нет данных</div>';
+    }
+    
+    // Проверяем, является ли содержимое JSON-массивом
+    if (isJSONArray(content)) {
+        const jsonArray = getJSONArray(content);
+        if (jsonArray && jsonArray.length > 0) {
+            return arrayToFormattedList(jsonArray);
+        }
+    }
+    
+    // Если это объект (но не массив), показываем его как JSON
+    if (typeof content === 'object') {
+        return `<pre class="message-json">${escapeHtml(JSON.stringify(content, null, 2))}</pre>`;
+    }
+    
+    // Обычный текст
+    return `<div class="message-text">${escapeHtml(String(content))}</div>`;
+}
+
 // Функция для добавления сообщения в чат (обновленная)
 function addMessage(text, isUser = true, devData = null) {
     const messagesArea = document.getElementById('messagesArea');
@@ -35,8 +141,15 @@ function addMessage(text, isUser = true, devData = null) {
     }
     
     // Формируем содержимое сообщения
+    let formattedContent;
+    if (isUser) {
+        formattedContent = `<div class="message-text">${escapeHtml(String(text))}</div>`;
+    } else {
+        formattedContent = formatMessageContent(text);
+    }
+    
     let messageHTML = `
-        <div class="message-content">${text}</div>
+        <div class="message-content">${formattedContent}</div>
         <div class="message-time">${time}</div>
     `;
     
@@ -71,12 +184,11 @@ function updateDevButtonsVisibility() {
             btn.classList.remove('hidden');
         } else {
             btn.classList.add('hidden');
-            // Скрываем все открытые панели при выключении dev режима
             const messageId = btn.dataset.messageId;
             const panel = document.getElementById(`devPanel_${messageId}`);
             if (panel) {
                 panel.classList.add('hidden');
-                panel.innerHTML = ''; // Очищаем содержимое
+                panel.innerHTML = '';
             }
         }
     });
@@ -90,29 +202,27 @@ function toggleDevInfo(messageId) {
     if (!devData) return;
     
     if (panel.classList.contains('hidden')) {
-        // Показываем информацию
         panel.innerHTML = `
             <div class="dev-info-content">
                 <div class="dev-info-header">🔧 ИНФОРМАЦИЯ ДЛЯ РАЗРАБОТЧИКА</div>
                 <div class="dev-info-item">
                     <span class="dev-info-label">SQL:</span>
-                    <pre class="dev-info-value">${devData.sql || 'Нет данных'}</pre>
+                    <pre class="dev-info-value">${escapeHtml(devData.sql || 'Нет данных')}</pre>
                 </div>
                 <div class="dev-info-item">
                     <span class="dev-info-label">Контекст:</span>
-                    <pre class="dev-info-value">${devData.context || 'Нет данных'}</pre>
+                    <pre class="dev-info-value">${escapeHtml(devData.context || 'Нет данных')}</pre>
                 </div>
                 <div class="dev-info-item">
                     <span class="dev-info-label">Функция:</span>
-                    <pre class="dev-info-value">${devData.function || 'Нет данных'}</pre>
+                    <pre class="dev-info-value">${escapeHtml(devData.function || 'Нет данных')}</pre>
                 </div>
             </div>
         `;
         panel.classList.remove('hidden');
     } else {
-        // Скрываем информацию
         panel.classList.add('hidden');
-        panel.innerHTML = ''; // Очищаем для экономии памяти
+        panel.innerHTML = '';
     }
 }
 
@@ -133,8 +243,6 @@ function showTypingIndicator() {
     `;
     
     messagesArea.appendChild(indicatorDiv);
-    
-    // Прокрутка к индикатору
     const chatContainer = document.getElementById('chatContainer');
     chatContainer.scrollTop = chatContainer.scrollHeight;
 }
@@ -156,13 +264,11 @@ async function submitFunction(event) {
     const question = userQuestion.value.trim();
     const cb_developers = document.getElementById('cb_developers');
 
-    // Проверка на пустой вопрос
     if (!question) {
         alert('Вы не заполнили поле с вопросом!');
         return;
     }
 
-    // Специальные команды для разработчика
     if(question == 'Dev'){
         document.getElementById('devContainer').classList.remove('cb_developers_container_hidden');
         document.getElementById('devContainer').classList.add('cb_developers_container_shown');
@@ -174,21 +280,14 @@ async function submitFunction(event) {
         cb_developers.checked = false;
         document.getElementById('devContainer').classList.remove('cb_developers_container_shown');
         document.getElementById('devContainer').classList.add('cb_developers_container_hidden');
-        updateDevButtonsVisibility(); // Обновляем видимость кнопок
+        updateDevButtonsVisibility();
         userQuestion.value = '';
         return;
     }
 
-    // Добавляем вопрос пользователя в чат
     addMessage(question, true);
-    
-    // Очищаем поле ввода
     userQuestion.value = '';
-    
-    // Блокируем кнопку отправки
     submitButton.disabled = true;
-    
-    // Показываем индикатор печати
     showTypingIndicator();
 
     try {
@@ -210,20 +309,18 @@ async function submitFunction(event) {
         
         const result = await response.json();
         
-        // Удаляем индикатор печати
         removeTypingIndicator();
         
-        // Добавляем ответ ассистента в чат с dev данными
         if (result) {
+            const answerContent = result[0];
             const devData = {
                 sql: result[3] || 'Нет данных',
                 context: result[1] || 'Нет данных',
                 function: result[2] || 'Нет данных'
             };
             
-            addMessage(result[0], false, devData);
+            addMessage(answerContent, false, devData);
             
-            // Если dev режим уже включен, показываем кнопки для нового сообщения
             if (cb_developers.checked) {
                 updateDevButtonsVisibility();
             }
@@ -231,18 +328,11 @@ async function submitFunction(event) {
         
     } catch (error) {
         console.error('Ошибка:', error);
-        
-        // Удаляем индикатор печати
         removeTypingIndicator();
-        
-        // Добавляем сообщение об ошибке
         addMessage('Произошла ошибка. Пожалуйста, попробуйте снова.', false);
         
     } finally {
-        // Разблокируем кнопку отправки
         submitButton.disabled = false;
-        
-        // Возвращаем фокус на поле ввода
         userQuestion.focus();
     }
 }
@@ -254,19 +344,13 @@ async function submitFunction2(event) {
     const userQuestion = document.getElementById('sql_question');
     const question = userQuestion.value.trim();
 
-    // Проверка на пустой вопрос
     if (!question) {
         alert('Вы не заполнили поле с SQL!');
         return;
     }
 
-    // Добавляем вопрос пользователя в чат
     addMessage(question, true);
-    
-    // Очищаем поле ввода
     userQuestion.value = '';
-    
-    // Показываем индикатор печати
     showTypingIndicator();
 
     try {
@@ -286,22 +370,15 @@ async function submitFunction2(event) {
         }
         
         const result = await response.json();
-        
-        // Удаляем индикатор печати
         removeTypingIndicator();
-        
         addMessage(result, false);
         
     } catch (error) {
         console.error('Ошибка:', error);
-        
-        // Удаляем индикатор печати
         removeTypingIndicator();
-                // Добавляем сообщение об ошибке
         addMessage('Произошла ошибка. Пожалуйста, попробуйте снова.', false);
         
     } finally {       
-        // Возвращаем фокус на поле ввода
         userQuestion.focus();
     }
 }
@@ -320,18 +397,13 @@ document.addEventListener('DOMContentLoaded', function() {
     const questionInput = document.getElementById('question');
     const devCheckbox = document.getElementById('cb_developers');
     
-    // Добавляем обработчик отправки формы
     form.addEventListener('submit', submitFunction);
-    
-    // Добавляем обработчик клавиши Enter
     questionInput.addEventListener('keydown', handleEnterKey);
     
-    // Добавляем обработчик изменения чекбокса
     if (devCheckbox) {
         devCheckbox.addEventListener('change', updateDevButtonsVisibility);
     }
     
-    // Делегирование событий для кнопок "Подробнее"
     document.addEventListener('click', function(e) {
         if (e.target.classList.contains('dev-info-btn')) {
             const messageId = e.target.dataset.messageId;
@@ -339,6 +411,5 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Добавляем приветственное сообщение
     addMessage('Здравствуйте! Я AI-ассистент. Задайте мне любой вопрос о данных в базе.', false);
 });

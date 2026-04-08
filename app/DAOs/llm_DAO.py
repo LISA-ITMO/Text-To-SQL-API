@@ -97,7 +97,7 @@ def sql_generation_node(state: AgentState) -> AgentState:
 
     response = llm.invoke(
         alpaca_prompt,
-        max_tokens=16384,
+        max_tokens=-1,
         temperature=0.1,
         top_p=0.8,
         stream=False)
@@ -151,7 +151,7 @@ class llmDAO():
         try:
             response = llm.invoke(
                 alpaca_prompt,
-                max_tokens=16384,
+                max_tokens=-1,
                 temperature=0.1,
                 top_p=0.8,
                 stream=False
@@ -183,7 +183,7 @@ class llmDAO():
         try:
             response = llm.invoke(
                 data.llm_prompt,
-                max_tokens=16384,
+                max_tokens=-1,
                 temperature=0.1,
                 top_p=0.8,
                 stream=False)
@@ -217,7 +217,7 @@ class llmDAO():
         try:
             response = llm_model(
             alpaca_prompt,
-            max_tokens=1024,
+            max_tokens=-1,
             temperature=0.1,
             top_p=0.8,
             stream=False,
@@ -381,7 +381,7 @@ class llmDAO():
             # Генерируем SQL
             response = llm.invoke(
                 alpaca_prompt,
-                max_tokens=16384,
+                max_tokens=-1,
                 temperature=0.1,
                 top_p=0.8,
                 stream=False)
