@@ -138,14 +138,6 @@ def get_optimal_settings():
 
 # Загрузка модели из Hugging Face
 def load_model_from_hf(repo_id: str, filename: str = None, local_model_path: str = None):
-    """
-    Загружает модель из Hugging Face Hub или с локального пути.
-    
-    Args:
-        repo_id: ID репозитория на Hugging Face (например, "vindows/qwen2.5-0.5b-text-to-sql-gguf")
-        filename: Имя файла модели в репозитории (обязательно для загрузки с HF)
-        local_model_path: Локальный путь к модели (альтернатива загрузке с HF)
-    """
     global llm
     try:
         settings, cuda_available = get_optimal_settings()
@@ -173,6 +165,10 @@ def load_model_from_hf(repo_id: str, filename: str = None, local_model_path: str
             # Сохраняем путь к загруженной модели
             model_path = llm_raw.model_path
             
+            #Чистим память от загруженной модели
+            del llm_raw
+
+            #Загружаем скачанную модель и оборачиваем заново
             llm = ChatLlamaCpp(
                 model_path=model_path,
                 **model_kwargs
@@ -194,13 +190,6 @@ def load_model_from_hf(repo_id: str, filename: str = None, local_model_path: str
     except Exception as e:
         print(f"Ошибка загрузки LLM: {e}")
         raise
-
-# Для обратной совместимости
-def load_model(model_path: str):
-    """
-    Загружает локальную модель (для обратной совместимости)
-    """
-    return load_model_from_hf(local_model_path=model_path, repo_id=None, filename=None)
 
 #Загрузка модели с локального или облачного сервера 
 def load_model_from_server(url:str, api_key: str = None, model: str = "NoName"):
@@ -226,5 +215,5 @@ def load_model_from_server(url:str, api_key: str = None, model: str = "NoName"):
 def get_llm():
     global llm
     if llm is None:
-        raise ValueError("Модель не загружена. Сначала вызовите load_model_from_hf() или load_model() или load_model_from_llamacpp_server().")
+        raise ValueError("Модель не загружена. Сначала загрузите её доступным способом.")
     return llm

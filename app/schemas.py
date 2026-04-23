@@ -14,3 +14,14 @@ class QuestionSQL_TOOL_CHAIN(QuestionSQL_TOOL):
 
 class tool_safe_sql_execute(BaseModel):
     sql:str
+
+class load_model_local(BaseModel):
+    url:str
+
+class load_model_hf(load_model_local):
+    filename:str
+
+class load_model_server(BaseModel):
+    url:str
+    api_key:str = None
+    model:str = "No Name"

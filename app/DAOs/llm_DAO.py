@@ -99,8 +99,7 @@ def sql_generation_node(state: AgentState) -> AgentState:
         alpaca_prompt,
         max_tokens=-1,
         temperature=0.1,
-        top_p=0.8,
-        stream=False)
+        top_p=0.8)
 
     response_text = response.content if hasattr(response, 'content') else ""
 
@@ -153,9 +152,7 @@ class llmDAO():
                 alpaca_prompt,
                 max_tokens=-1,
                 temperature=0.1,
-                top_p=0.8,
-                stream=False
-            )
+                top_p=0.8)
 
             response_text = response.content if hasattr(response, 'content') else ""
 
@@ -185,59 +182,12 @@ class llmDAO():
                 data.llm_prompt,
                 max_tokens=-1,
                 temperature=0.1,
-                top_p=0.8,
-                stream=False)
+                top_p=0.8)
             return response.content
             
         except Exception as e:
             return (f"Ошибка работы LLM: {e}")
         
-    #Метод для фреймворка llama_cpp_agent сначала выполняющий функцию, а потом использующий контекст из неё для генерации SQL
-    @staticmethod
-    def get_llm_sql_answer_with_tool(data:QuestionSQL):
-        llm_model = get_llm()
-        alpaca_prompt = f"""You are SQL specialist. Do NOT output reasoning or thinking. Do NOT include <think> blocks. Only output SQL. Generate an SQL query based on the Prompt and the context from Company database.
-        Prompt: {data.llm_prompt}
-        Company database: {data.llm_context}
-        Output ONLY the SQL query. No explanations or text before/after. Do NOT explain anything. Do NOT add comments. Return ONLY SQL."""
-        llm_provider = LlamaCppPythonProvider(llm_model)
-        settings = llm_provider.get_provider_default_settings()
-        settings.temperature = 0.1
-        get_db_info_function_tool = LlamaCppFunctionTool(toolDAO.connect_and_get_all_tables_info)
-        #get_users_table_info = LlamaCppFunctionTool(get_users_table_info_o)
-
-        function_call_agent = FunctionCallingAgent(
-            llm_provider,
-            llama_cpp_function_tools=[get_db_info_function_tool],
-            allow_parallel_function_calling=True,
-            messages_formatter_type=MessagesFormatterType.CHATML)
-        
-        response_provider = function_call_agent.generate_response("Какие таблицы и их столбцы в скобках есть у меня в базе данных? Выведи их без перевода на русский язык.", llm_sampling_settings=settings)
-        
-        try:
-            response = llm_model(
-            alpaca_prompt,
-            max_tokens=-1,
-            temperature=0.1,
-            top_p=0.8,
-            stream=False,
-            stop = ["Explanation:", "; --", ";"],
-            extra_body={"chat_template_kwargs": {"enable_thinking": False}})
-
-            result = response['choices'][0]['text']
-            valedate_answer = validate_sql(response.content) 
-            if final_answer['Status']:
-                final_answer['result'] = valedate_answer['SQL']
-            else:
-                final_answer['result'] = valedate_answer['Error']
-            final_answer = {}
-            final_answer['user_request'] = data.llm_prompt
-            
-            final_answer['context'] = response_provider[0]["arguments"]["content"]
-            return final_answer
-        except Exception as e:
-            return (f"Ошибка работы LLM: {e}")
-
     @staticmethod
     def get_llm_sql_answer_with_tool_and_chain(data:QuestionSQL_TOOL_CHAIN):
 
@@ -346,89 +296,3 @@ class llmDAO():
             "final_answer": "",
         })
         return (result["final_answer"], result["context"], result["function_to_call"], result["sql"])
-
-    # Добавим новый метод для прямого использования RAG без графа
-    @staticmethod
-    def get_llm_sql_answer_with_rag_only(data: QuestionSQL_TOOL_CHAIN):
-        """
-        Генерация SQL запроса используя ТОЛЬКО контекст из RAG системы.
-        Не вызывает инструменты или графы, только RAG + LLM.
-        """
-        try:
-            # Получаем контекст из RAG
-            llm = get_llm()
-            rag_context = get_context_from_rag(data.llm_prompt)
-
-            # Проверяем, не вернулась ли ошибка
-            if "Ошибка" in rag_context and "базы данных" in rag_context:
-                # Если RAG вернул ошибку, пробуем получить общую информацию о таблицах
-                #logger.warning("RAG вернул ошибку, используем общую информацию о таблицах")
-
-                # Получаем общую информацию о всех таблицах как запасной вариант
-                try:
-                    general_info = toolDAO.connect_and_get_all_tables_info()
-                    rag_context = f"Общая информация о таблицах в базе данных:\n{general_info}\n\nВопрос пользователя: {data.llm_prompt}"
-                except Exception as e:
-                    rag_context = f"Не удалось получить информацию о базе данных. Ошибка: {str(e)}"
-
-            # Используем улучшенный промпт
-            alpaca_prompt = f"""You are SQL specialist. Do NOT output reasoning or thinking. Do NOT include <think> blocks. Only output SQL. Generate an SQL query based on the Prompt and the context from Company database.
-            Prompt: {data.llm_prompt}
-            Company database: {data.llm_context}
-            Output ONLY the SQL query. No explanations or text before/after. Do NOT explain anything. Do NOT add comments. Return ONLY SQL."""
-
-
-            # Генерируем SQL
-            response = llm.invoke(
-                alpaca_prompt,
-                max_tokens=-1,
-                temperature=0.1,
-                top_p=0.8,
-                stream=False)
-
-            # Форматируем ответ
-            sql_query = response.content if hasattr(response, 'content') else str(response)
-            sql_query = sql_query.strip()
-
-            # Добавляем точку с запятой, если ее нет
-            if not sql_query.endswith(';'):
-                sql_query += ';'
-
-            # Очищаем SQL от лишнего текста
-            validate_answer = validate_sql(response.content) 
-            if validate_answer['Status']:
-                sql_query = validate_answer['SQL']
-            else:
-                sql_query = validate_answer['Error']
-
-            # Если требуется выполнить SQL
-            if data.execute_sql:
-                try:
-                    sql_result = toolDAO.connect_and_execute_sql(sql_query)
-                    return {
-                        "sql_query": sql_query,
-                        "execution_result": sql_result,
-                        "rag_context_preview": rag_context[:300] + "..." if len(rag_context) > 300 else rag_context,
-                        "status": "success"
-                    }
-                except Exception as e:
-                    return {
-                        "sql_query": sql_query,
-                        "error": f"Ошибка выполнения SQL: {str(e)}",
-                        "rag_context_preview": rag_context[:300] + "..." if len(rag_context) > 300 else rag_context,
-                        "status": "execution_error"
-                    }
-            else:
-                return {
-                    "sql_query": sql_query,
-                    "rag_context_preview": rag_context[:300] + "..." if len(rag_context) > 300 else rag_context,
-                    "rag_context_length": len(rag_context),
-                    "status": "success"
-                }
-
-        except Exception as e:
-            #logger.error(f"Ошибка генерации SQL с RAG: {e}")
-            return {
-                "error": f"Ошибка генерации SQL с RAG: {str(e)}",
-                "status": "generation_error"
-            }
