@@ -21,5 +21,8 @@ def set_local_model_hf(data:load_model_hf):
         return(f"Проблемы при загрузке: {e}") 
 
 @app.post("/setservermodel")
-def set_server_model(data:load_model_server):
-    return load_model_from_server(url = data.url, api_key = data.api_key, model = data.model)
+def set_server_model(data: load_model_server):
+    print(f"DEBUG: Получен запрос на подключение серверной модели: {data.url}")
+    result = load_model_from_server(url=data.url, api_key=data.api_key, model=data.model)
+    print(f"DEBUG: Модель установлена, llm = {result}")
+    return {"status": "ok", "message": "Модель подключена"}

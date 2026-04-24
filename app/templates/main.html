@@ -31,6 +31,88 @@
             </form>
         </div>
 
+        <div id="settingsModal" class="modal">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2>Настройки</h2>
+                    <span class="close-btn" id="closeSettingsModal">&times;</span>
+                </div>
+                <div class="modal-tabs">
+                    <button class="tab-btn active" data-tab="general">Общие настройки</button>
+                    <button class="tab-btn" data-tab="llm">LLM</button>
+                    <button class="tab-btn" data-tab="rag">RAG</button>
+                </div>
+                <div class="modal-body">
+                    <!-- Вкладка "Общие настройки" -->
+                    <div id="tab-general" class="tab-content active">
+                        <!-- Переключатель Модель LLM -->
+                        <div class="setting-item">
+                            <label class="setting-label">Модель LLM</label>
+                            <div class="mode-switch">
+                                <span id="labelLocal" class="mode-label active">Локальная модель</span>
+                                <label class="toggle-switch">
+                                    <input type="checkbox" id="llmModeToggle">
+                                    <span class="slider"></span>
+                                </label>
+                                <span id="labelServer" class="mode-label">Серверная модель</span>
+                            </div>
+                            <!-- Блок локальной модели -->
+                            <div id="localModelBlock" class="model-block">
+                                <div class="input-field">
+                                    <label>Путь к модели (URL)</label>
+                                    <input type="text" id="localUrl" class="modal-input" placeholder="Введите путь или URL...">
+                                </div>
+                                <div class="checkbox-item">
+                                    <input type="checkbox" id="hfCheckbox">
+                                    <label for="hfCheckbox">Скачать модель с Hugging Face</label>
+                                </div>
+                                <div id="hfFilenameBlock" class="input-field hidden">
+                                    <label>Название файла модели</label>
+                                    <input type="text" id="hfFilename" class="modal-input" placeholder="например, model.Q4_K_M.gguf">
+                                </div>
+                                <button id="connectLocalModel" class="btn_connect">Подключить модель</button>
+                            </div>
+                            <!-- Блок серверной модели -->
+                            <div id="serverModelBlock" class="model-block hidden">
+                                <div class="input-field">
+                                    <label>URL сервера *</label>
+                                    <input type="text" id="serverUrl" class="modal-input" placeholder="https://api.example.com">
+                                </div>
+                                <div class="input-field">
+                                    <label>API Key (опционально)</label>
+                                    <input type="text" id="serverApiKey" class="modal-input" placeholder="sk-...">
+                                </div>
+                                <div class="input-field">
+                                    <label>Название модели (опционально)</label>
+                                    <input type="text" id="serverModel" class="modal-input" placeholder="gpt-3.5-turbo">
+                                </div>
+                                <button id="connectServerModel" class="btn_connect">Подключить модель</button>
+                            </div>
+                        </div>
+                        
+                        <!-- Переключатель Использовать RAG -->
+                        <div class="setting-item">
+                            <label class="setting-label">Использовать RAG</label>
+                            <label class="toggle-switch">
+                                <input type="checkbox" id="ragToggle" checked>
+                                <span class="slider"></span>
+                            </label>
+                            <span class="toggle-hint">(поиск по базе знаний для улучшения SQL)</span>
+                        </div>
+                    </div>
+
+                    <!-- Вкладка LLM -->
+                    <div id="tab-llm" class="tab-content">
+                        <p class="dev-placeholder">🚧 В разработке</p>
+                    </div>
+                    <!-- Вкладка RAG -->
+                    <div id="tab-rag" class="tab-content">
+                        <p class="dev-placeholder">🚧 В разработке</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <div class="btn_options_container">
             <button type="submit" id="btn_options" class="btn_options" onclick=""><img src="..\static\icons\settings.png" width="50%"></a></button>
         </div>

@@ -255,10 +255,11 @@ function removeTypingIndicator() {
     }
 }
 
-// Обновленная основная функция отправки сообщения
+let useRAG = true; // по умолчанию RAG включен, как в оригинале
+
+// Функция отправки сообщения (обновлённая)
 async function submitFunction(event) {
     event.preventDefault();
-
     const userQuestion = document.getElementById('question');
     const submitButton = document.getElementById('btn_submit');
     const question = userQuestion.value.trim();
@@ -269,14 +270,13 @@ async function submitFunction(event) {
         return;
     }
 
-    if(question == 'Dev'){
+    if (question === 'Dev') {
         document.getElementById('devContainer').classList.remove('cb_developers_container_hidden');
         document.getElementById('devContainer').classList.add('cb_developers_container_shown');
         alert('Вы вошли в режим разработчика!');
         userQuestion.value = '';
         return;
-    }
-    else if(question == 'NoDev'){
+    } else if (question === 'NoDev') {
         cb_developers.checked = false;
         document.getElementById('devContainer').classList.remove('cb_developers_container_shown');
         document.getElementById('devContainer').classList.add('cb_developers_container_hidden');
@@ -291,26 +291,28 @@ async function submitFunction(event) {
     showTypingIndicator();
 
     try {
-        const response = await fetch('/LLM/getllmsqlanswerwithtoolchainrag', {
+        // Выбираем endpoint в зависимости от настройки RAG
+        const endpoint = useRAG
+            ? '/LLM/getllmsqlanswerwithtoolchainrag'
+            : '/LLM/getllmanswerwithtoolandchain';
+
+        const response = await fetch(endpoint, {
             method: 'POST',
             headers: {
                 'accept': 'application/json',
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                'llm_prompt': question,
-                'execute_sql': true
+                llm_prompt: question,
+                execute_sql: true
             })
         });
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
+
+        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
         const result = await response.json();
-        
         removeTypingIndicator();
-        
+
         if (result) {
             const answerContent = result[0];
             const devData = {
@@ -318,24 +320,21 @@ async function submitFunction(event) {
                 context: result[1] || 'Нет данных',
                 function: result[2] || 'Нет данных'
             };
-            
             addMessage(answerContent, false, devData);
-            
             if (cb_developers.checked) {
                 updateDevButtonsVisibility();
             }
         }
-        
     } catch (error) {
         console.error('Ошибка:', error);
         removeTypingIndicator();
         addMessage('Произошла ошибка. Пожалуйста, попробуйте снова.', false);
-        
     } finally {
         submitButton.disabled = false;
         userQuestion.focus();
     }
 }
+
 
 // Функция выполнения SQL
 async function submitFunction2(event) {
@@ -391,25 +390,134 @@ function handleEnterKey(event) {
     }
 }
 
-// Обработчик изменения чекбокса разработчика
+// ========== МОДАЛЬНОЕ ОКНО НАСТРОЕК ==========
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('QuestionForm');
     const questionInput = document.getElementById('question');
     const devCheckbox = document.getElementById('cb_developers');
-    
+    const settingsBtn = document.getElementById('btn_options');
+    const modal = document.getElementById('settingsModal');
+    const closeBtn = document.getElementById('closeSettingsModal');
+
+    // Существующие обработчики
     form.addEventListener('submit', submitFunction);
     questionInput.addEventListener('keydown', handleEnterKey);
-    
-    if (devCheckbox) {
-        devCheckbox.addEventListener('change', updateDevButtonsVisibility);
-    }
-    
+    if (devCheckbox) devCheckbox.addEventListener('change', updateDevButtonsVisibility);
     document.addEventListener('click', function(e) {
         if (e.target.classList.contains('dev-info-btn')) {
             const messageId = e.target.dataset.messageId;
             toggleDevInfo(messageId);
         }
     });
-    
+
+    // Открыть/закрыть окно настроек
+    settingsBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        modal.classList.add('show');
+    });
+    closeBtn.addEventListener('click', () => modal.classList.remove('show'));
+    window.addEventListener('click', (e) => {
+        if (e.target === modal) modal.classList.remove('show');
+    });
+
+    // Переключение вкладок
+    const tabs = document.querySelectorAll('.tab-btn');
+    const contents = document.querySelectorAll('.tab-content');
+    tabs.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tab = btn.dataset.tab;
+            tabs.forEach(b => b.classList.remove('active'));
+            contents.forEach(c => c.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById(`tab-${tab}`).classList.add('active');
+        });
+    });
+
+    // ---------- Настройки LLM режима ----------
+    const llmModeToggle = document.getElementById('llmModeToggle');
+    const labelLocal = document.getElementById('labelLocal');
+    const labelServer = document.getElementById('labelServer');
+    const localBlock = document.getElementById('localModelBlock');
+    const serverBlock = document.getElementById('serverModelBlock');
+    const hfCheckbox = document.getElementById('hfCheckbox');
+    const hfFilenameBlock = document.getElementById('hfFilenameBlock');
+
+    function updateLLMMode() {
+        const isServer = llmModeToggle.checked; // true = сервер, false = локальная
+        if (isServer) {
+            labelLocal.classList.remove('active');
+            labelServer.classList.add('active');
+            localBlock.classList.add('hidden');
+            serverBlock.classList.remove('hidden');
+        } else {
+            labelLocal.classList.add('active');
+            labelServer.classList.remove('active');
+            localBlock.classList.remove('hidden');
+            serverBlock.classList.add('hidden');
+        }
+    }
+
+    llmModeToggle.addEventListener('change', updateLLMMode);
+    // Показ/скрытие поля filename для HF
+    hfCheckbox.addEventListener('change', () => {
+        hfFilenameBlock.classList.toggle('hidden', !hfCheckbox.checked);
+    });
+
+    // Подключение локальной модели
+    document.getElementById('connectLocalModel').addEventListener('click', async () => {
+        const url = document.getElementById('localUrl').value.trim();
+        if (!url) { alert('Введите путь или URL модели'); return; }
+        const isHF = hfCheckbox.checked;
+        const endpoint = isHF ? '/loadmodel/setlocalmodelhf' : '/loadmodel/setlocalmodel';
+        const body = isHF
+            ? JSON.stringify({ url: url, filename: document.getElementById('hfFilename').value.trim() })
+            : JSON.stringify({ url: url });
+
+        try {
+            const res = await fetch(endpoint, {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body
+            });
+            const data = await res.text(); // или json, смотря что возвращается
+            alert(data);
+            modal.classList.remove('show');
+        } catch (err) {
+            alert('Ошибка подключения: ' + err.message);
+        }
+    });
+
+    // Подключение серверной модели
+    document.getElementById('connectServerModel').addEventListener('click', async () => {
+        const url = document.getElementById('serverUrl').value.trim();
+        if (!url) { alert('Введите URL сервера'); return; }
+        const apiKey = document.getElementById('serverApiKey').value.trim() || "not-needed";
+        const model = document.getElementById('serverModel').value.trim() || "No Name";
+        const body = JSON.stringify({ url, api_key: apiKey, model });
+
+        try {
+            const res = await fetch('/loadmodel/setservermodel', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body
+            });
+            const data = await res.text();
+            alert("Модель успешно подключена!");
+            modal.classList.remove('show');
+        } catch (err) {
+            alert('Ошибка подключения: ' + err.message);
+        }
+    });
+
+    // Переключатель RAG
+    const ragToggle = document.getElementById('ragToggle');
+    if (ragToggle) {
+        ragToggle.addEventListener('change', () => {
+            useRAG = ragToggle.checked;
+        });
+        useRAG = ragToggle.checked; // синхронизация начального состояния
+    }
+
+    // Стартовое сообщение
     addMessage('Здравствуйте! Я AI-ассистент. Задайте мне любой вопрос о данных в базе.', false);
 });
