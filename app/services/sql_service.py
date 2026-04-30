@@ -2,10 +2,8 @@ import re
 from typing import Dict, Optional
 from sqlglot import parse_one, exp, ParseError
 
+# Извлекает SQL запрос из текста, удаляя комментарии, пояснения и другой "шум".
 def extract_sql_from_text(text: str) -> str:
-    """
-    Извлекает SQL запрос из текста, удаляя комментарии, пояснения и другой "шум".
-    """
     if not text:
         return ""
     
@@ -80,11 +78,8 @@ def extract_sql_from_text(text: str) -> str:
     
     return sql
 
-
+#Валидация SQL запроса с предварительным извлечением из текста.
 def validate_sql(sql_query: str, dialect: str = "postgres") -> Dict:
-    """
-    Валидация SQL запроса с предварительным извлечением из текста.
-    """
     forbidden_expressions = [
         exp.Insert, exp.Update, exp.Delete, exp.Drop, exp.Alter,
         exp.Create, exp.TruncateTable, exp.Merge, exp.Grant, exp.Revoke

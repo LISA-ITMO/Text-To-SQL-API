@@ -1,8 +1,4 @@
 from app.services.db_service import get_connection
-from app.services.sql_service import validate_sql
-from typing import Union, Optional
-from langchain.tools import tool
-import time
 
 class toolDAO():
 
@@ -93,32 +89,6 @@ class toolDAO():
     @staticmethod
     def connect_and_execute_sql(sql:str):
         connection = get_connection()
-        try:
-            cursor = connection.cursor()
-            cursor.execute(sql)
-            response = cursor.fetchall()
-            cursor.close()
-            return response
-        
-        except Exception as e:
-            print(f"Error executing SQL: {e}")
-            raise
-        finally:
-            if connection:
-                connection.close()
-
-    #Безопасный режим выполнения SQL. Не требуется при работе c LLM, так как там заранее проверяется
-    @staticmethod
-    def safe_connect_and_execute_sql(sql:str):
-
-        connection = get_connection()
-        validation = validate_sql(sql)
-
-        if validation['Status']:
-            sql = validation['SQL']
-        else:
-            return validation['Error']
-        
         try:
             cursor = connection.cursor()
             cursor.execute(sql)
