@@ -9,7 +9,7 @@ from langgraph.graph import StateGraph, END
 from langchain.agents import create_agent
 from langchain.tools import tool
 from typing import TypedDict
-from app.services.llm_service import get_llm
+from app.services.llm_service import get_llm, get_llm_backend
 from app.DAOs.tool_DAO import toolDAO
 from app.services.sql_service import validate_sql
 from app.services.rag_service import get_context_from_rag
@@ -17,6 +17,16 @@ from app.services.rag_service import get_context_from_rag
 AVAILABLE_TOOLS = {
     "connect_and_get_all_tables_info": toolDAO.connect_and_get_all_tables_info,
 }
+
+#Универсальный извлекатель текста ответа.
+def extract_response_text(response) -> str:
+    if hasattr(response, 'content') and response.content:
+        return response.content
+    if hasattr(response, 'additional_kwargs'):
+        reasoning = response.additional_kwargs.get('reasoning_content', '')
+        if reasoning:
+            return reasoning
+    return str(response)
 
 #Класс с описанием состояния LLM-агента
 class AgentState(TypedDict):
@@ -33,20 +43,6 @@ def agent_node(state: AgentState) -> AgentState:
         context = toolDAO.connect_and_get_all_tables_info()
     else:
         context = state["context"]
-
-
-    '''model_with_tools = llm.bind_tools([toolDAO.connect_and_get_all_tables_info])
-    response = model_with_tools.invoke("Какие таблицы и их столбцы в скобках есть у меня в базе данных? Выведи их без перевода на русский язык.")
-    
-    response_text = response.content if hasattr(response, 'content') else str(response)
-    print(response_text)
-    try:
-        # Ищем JSON в ответе (модель могла добавить пояснения)
-        json_match = re.search(r'\{.*\}', response_text, re.DOTALL)
-        if json_match:
-            data = json.loads(json_match.group())
-        else:
-            data = json.loads(response_text)'''
         
     return {
             "question": state["question"],
@@ -55,16 +51,6 @@ def agent_node(state: AgentState) -> AgentState:
             "final_answer": "",
             "sql":""
         }
-        
-    '''except json.JSONDecodeError:
-        # Если не получилось распарсить JSON, возвращаем как финальный ответ
-        print("Ошибка обработки JSON в ноде агента!")
-        return {
-            "question": state["question"],
-            "function_to_call": "",
-            "context": "",
-            "final_answer": ""
-        }'''
 
 #Нода для получения функции и вызова её из массива функций 
 def tool_node(state: AgentState) -> AgentState:
@@ -90,24 +76,26 @@ def tool_node(state: AgentState) -> AgentState:
 #Последняя нода получающая контекст и вызывающая генерацию SQL-запроса по alpaca prompt
 def sql_generation_node(state: AgentState) -> AgentState:
     llm = get_llm()
+    backend = get_llm_backend()
+
     alpaca_prompt = f"""You are SQL specialist. Do NOT output reasoning or thinking. Do NOT include <think> blocks. Only output SQL. Generate an SQL query based on the Prompt and the context from Company database.
     Prompt: {state.get('question')}
     Company database: {state.get('context')}
     Output ONLY the SQL query. No explanations or text before/after. Do NOT explain anything. Do NOT add comments. Return ONLY SQL."""
 
-    response = llm.invoke(
-        alpaca_prompt,
-        max_tokens=-1,
-        temperature=0.1,
-        top_p=0.8)
+    invoke_kwargs = {
+        "temperature": 0.1,
+    }
+    
+    if backend == 'local':
+        invoke_kwargs["max_tokens"] = -1
+        invoke_kwargs["top_p"] = 0.8
+    else:
+        invoke_kwargs["max_tokens"] = 4096
+    
+    response = llm.invoke(alpaca_prompt, **invoke_kwargs)
 
-    response_text = response.content if hasattr(response, 'content') else ""
-
-    if not response_text or not response_text.strip():
-        if hasattr(response, 'additional_kwargs'):
-            reasoning = response.additional_kwargs.get('reasoning_content', '')
-            if reasoning:
-                response_text = reasoning
+    response_text = extract_response_text(response)
     
     final_answer = validate_sql(response_text)
     
@@ -140,28 +128,25 @@ def end_with_error_node(state: AgentState) -> AgentState:
 class llmDAO():
     #Метод для генерации SQL-запроса по предоставленным в полях промпта и контекста базы данных
     @staticmethod
-    def get_llm_sql_answer(data:QuestionSQL) -> str:
+    def get_llm_sql_answer(data: QuestionSQL) -> str:
         llm = get_llm()
+        backend = get_llm_backend()
         alpaca_prompt = f"""You are SQL specialist. Do NOT output reasoning or thinking. Do NOT include <think> blocks. Only output SQL. Generate an SQL query based on the Prompt and the context from Company database.
         Prompt: {data.llm_prompt}
         Company database: {data.llm_context}
         Output ONLY the SQL query. No explanations or text before/after. Do NOT explain anything. Do NOT add comments. Return ONLY SQL."""
 
         try:
-            response = llm.invoke(
-                alpaca_prompt,
-                max_tokens=-1,
-                temperature=0.1,
-                top_p=0.8)
+            invoke_kwargs = {"temperature": 0.1}
+            if backend == 'local':
+                invoke_kwargs["max_tokens"] = -1
+                invoke_kwargs["top_p"] = 0.8
+            else:
+                invoke_kwargs["max_tokens"] = 4096
+                
+            response = llm.invoke(alpaca_prompt, **invoke_kwargs)
 
-            response_text = response.content if hasattr(response, 'content') else ""
-
-            if not response_text or not response_text.strip():
-                if hasattr(response, 'additional_kwargs'):
-                    reasoning = response.additional_kwargs.get('reasoning_content', '')
-                    if reasoning:
-                        response_text = reasoning
-                        print("INFO: Использован reasoning_content (content был пуст)")
+            response_text = extract_response_text(response)
 
             final_answer = validate_sql(response_text)
             
@@ -175,18 +160,21 @@ class llmDAO():
         
     #Простой метод для генерации обычного ответа (не SQL-запроса)
     @staticmethod
-    def get_llm_answer(data:Question):
+    def get_llm_answer(data: Question):
         llm = get_llm()
-        try:
-            response = llm.invoke(
-                data.llm_prompt,
-                max_tokens=-1,
-                temperature=0.1,
-                top_p=0.8)
-            return response.content
+        backend = get_llm_backend()
+        invoke_kwargs = {"temperature": 0.1}
+        if backend == 'local':
+            invoke_kwargs["max_tokens"] = -1
+            invoke_kwargs["top_p"] = 0.8
+        else:
+            invoke_kwargs["max_tokens"] = 4096
             
+        try:
+            response = llm.invoke(data.llm_prompt, **invoke_kwargs)
+            return extract_response_text(response)
         except Exception as e:
-            return (f"Ошибка работы LLM: {e}")
+            return f"Ошибка работы LLM: {e}"
         
     @staticmethod
     def get_llm_sql_answer_with_tool_and_chain(data:QuestionSQL_TOOL_CHAIN):

@@ -1,10 +1,12 @@
 import os
 import warnings
 import subprocess
-from langchain_community.chat_models import ChatLlamaCpp, ChatOpenAI
+from langchain_community.chat_models import ChatLlamaCpp
+from langchain_openai import ChatOpenAI
 from llama_cpp import Llama
 
 llm = None
+LLM_BACKEND = None
 
 def is_cuda_available_llama():
     """
@@ -136,13 +138,28 @@ def get_optimal_settings():
     
     return settings, cuda_available
 
+def load_model_from_server(url: str, api_key: str = None, model: str = "NoName"):
+    global llm, LLM_BACKEND
+    try:
+        llm = ChatOpenAI(
+            base_url=url,
+            api_key=api_key or "dummy",  # некоторые сервера требуют непустой ключ
+            model=model,
+            temperature=0.1,
+            max_tokens=8192,              # ← безопасное значение для API
+        )
+        LLM_BACKEND = 'api'
+        print(f"Соединение с сервером LLM ({url}) успешно установлено.")
+        return llm
+    except Exception as e:
+        print(f"Ошибка при подключении к серверу с LLM: {e}")
+        return None
+
 # Загрузка модели из Hugging Face
 def load_model_from_hf(repo_id: str, filename: str = None, local_model_path: str = None):
-    global llm
+    global llm, LLM_BACKEND
     try:
         settings, cuda_available = get_optimal_settings()
-
-        # Подготавливаем параметры для загрузки
         model_kwargs = {
             'n_ctx': settings['n_ctx'],
             'n_threads': settings['n_threads'],
@@ -150,7 +167,6 @@ def load_model_from_hf(repo_id: str, filename: str = None, local_model_path: str
             'n_gpu_layers': settings['n_gpu_layers'] if cuda_available else 0,
             'verbose': settings['verbose']
         }
-
         # Загружаем модель (с Hugging Face или локально)
         if repo_id and filename:
             print(f"Загрузка модели {repo_id}/{filename} из Hugging Face...")
@@ -169,51 +185,18 @@ def load_model_from_hf(repo_id: str, filename: str = None, local_model_path: str
             del llm_raw
 
             #Загружаем скачанную модель и оборачиваем заново
-            llm = ChatLlamaCpp(
-                model_path=model_path,
-                **model_kwargs
-            )
-            print(f"Модель успешно загружена из Hugging Face.")
-            
-        elif local_model_path:
-            print(f"Загрузка локальной модели из {local_model_path}...")
-            llm = ChatLlamaCpp(
-                model_path=local_model_path,
-                **model_kwargs
-            )
-            print(f"Локальная модель успешно загружена.")
-        else:
-            raise ValueError("Необходимо указать либо (repo_id и filename), либо local_model_path")
-
-        return llm
-                
+            llm = ChatLlamaCpp(model_path=model_path, **model_kwargs)
+            LLM_BACKEND = 'local'
+            return llm
     except Exception as e:
         print(f"Ошибка загрузки LLM: {e}")
         raise
 
-#Загрузка модели с локального или облачного сервера 
-def load_model_from_server(url:str, api_key: str = None, model: str = "NoName"):
-    """
-    Загружает модель с локального или облачного сервера
-    """
-    global llm
-    try:
-        llm = ChatOpenAI(
-            base_url=url,
-            api_key=api_key,
-            model=model,
-            temperature=0.1,
-            max_tokens=16384
-        )
-        print(f"Соединение с сервером LLM успешно установлено.")
-        return llm
-    except Exception as e:
-        print(f"Ошибка при подключении к серверу с LLM: {e}")
-        return None 
-    
-# Передача переменной для доступа к функциям LLM.
 def get_llm():
     global llm
     if llm is None:
-        raise ValueError("Модель не загружена. Сначала загрузите её доступным способом.")
+        raise ValueError("Модель не загружена.")
     return llm
+
+def get_llm_backend():
+    return LLM_BACKEND
